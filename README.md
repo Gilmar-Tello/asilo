@@ -19,6 +19,3 @@ instalar los modulos en asilo_web y fundacion_web
 npm init -y
 npm install express
 
-## Variables del .env
-
-...(solo los nombres, nunca los valores)
