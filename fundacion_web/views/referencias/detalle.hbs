@@ -1,0 +1,171 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-1">{{referencia.codigo}}</h2>
+    <span class="badge {{referencia.clase_estado}} fs-6">{{referencia.estado}}</span>
+  </div>
+  <a href="/referencias" class="btn btn-outline-secondary">Volver a la lista</a>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<div class="row g-3 mb-3">
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Interno y especialidad</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>{{referencia.interno_nombre}}</strong></p>
+        <p class="mb-1">
+          {{#if referencia.interno_edad}}{{referencia.interno_edad}} años{{/if}}
+          {{#if referencia.interno_sexo}}·
+            {{#if (eq referencia.interno_sexo 'M')}}Masculino{{else}}Femenino{{/if}}
+          {{/if}}
+        </p>
+        <p class="mb-1">Especialidad pedida: <strong>{{referencia.especialidad}}</strong>
+          {{#if referencia.es_externa}}<span class="badge text-bg-light border">Externa al catálogo</span>{{/if}}
+        </p>
+        <p class="mb-0 small text-muted">
+          Recibida el {{referencia.fecha_recepcion_texto}} · solicitud n.º {{referencia.id_solicitud_asilo}} del asilo
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Cita</div>
+      <div class="card-body">
+        <p class="mb-1">Fecha y hora:
+          <strong>{{#if referencia.fecha_cita_texto}}{{referencia.fecha_cita_texto}}{{else}}Sin programar{{/if}}</strong></p>
+        <p class="mb-1">Especialista:
+          <strong>{{#if referencia.especialista_nombre}}{{referencia.especialista_nombre}}{{else}}Sin asignar{{/if}}</strong></p>
+        {{#if referencia.motivo_rechazo}}
+          <div class="alert alert-danger mt-2 mb-0">
+            <strong>Motivo del rechazo:</strong> {{referencia.motivo_rechazo}}
+          </div>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">Evaluación inicial del médico general</div>
+  <div class="card-body">
+    <p class="mb-0" style="white-space: pre-line;">{{referencia.evaluacion_inicial}}</p>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">Padecimientos del interno</div>
+  <ul class="list-group list-group-flush">
+    {{#each padecimientos}}
+      <li class="list-group-item">
+        <strong>{{nombre_padecimiento}}</strong>
+        {{#if medicamento_cajon}}<span class="small"> · {{medicamento_cajon}} {{dosis}}</span>{{/if}}
+        {{#if descripcion}}<div class="small text-muted">{{descripcion}}</div>{{/if}}
+      </li>
+    {{else}}
+      <li class="list-group-item text-muted">El asilo no envió padecimientos.</li>
+    {{/each}}
+  </ul>
+</div>
+
+{{#if puedeProgramar}}
+  <div class="card mb-3">
+    <div class="card-header">Programar cita</div>
+    <div class="card-body">
+      {{#if sinEspecialistas}}
+        <div class="alert alert-warning mb-0">
+          No hay especialistas activos en «{{referencia.especialidad}}». Los especialistas los registra el
+          administrador del asilo (usuarios con rol de médico especialista y esa especialidad).
+          Mientras tanto puedes dejarla en espera de disponibilidad o rechazarla.
+        </div>
+      {{else}}
+        <form class="row g-2" action="/referencias/{{referencia.codigo}}/programar" method="POST">
+          <div class="col-12 col-md-5">
+            <label for="id_especialista" class="form-label">Especialista *</label>
+            <select id="id_especialista" name="id_especialista" class="form-select" required>
+              <option value="">Seleccione...</option>
+              {{#each especialistas}}
+                <option value="{{id_especialista}}">{{nombre_completo}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="fecha" class="form-label">Fecha y hora *</label>
+            <input type="datetime-local" id="fecha" name="fecha" class="form-control" required>
+          </div>
+          <div class="col-12 col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-success w-100">Programar</button>
+          </div>
+        </form>
+      {{/if}}
+    </div>
+  </div>
+{{/if}}
+
+{{#if puedeReprogramar}}
+  <div class="card mb-3">
+    <div class="card-header">Reprogramar cita</div>
+    <div class="card-body">
+      {{#if sinEspecialistas}}
+        <div class="alert alert-warning mb-0">
+          No hay especialistas activos en «{{referencia.especialidad}}» para reprogramar.
+        </div>
+      {{else}}
+        <form class="row g-2" action="/referencias/{{referencia.codigo}}/reprogramar" method="POST">
+          <div class="col-12 col-md-5">
+            <label for="id_especialista" class="form-label">Especialista *</label>
+            <select id="id_especialista" name="id_especialista" class="form-select" required>
+              {{#each especialistas}}
+                <option value="{{id_especialista}}" {{#if actual}}selected{{/if}}>{{nombre_completo}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="col-12 col-md-4">
+            <label for="fecha" class="form-label">Nueva fecha y hora *</label>
+            <input type="datetime-local" id="fecha" name="fecha" class="form-control"
+                   value="{{referencia.fecha_cita_input}}" required>
+          </div>
+          <div class="col-12 col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Reprogramar</button>
+          </div>
+        </form>
+      {{/if}}
+    </div>
+  </div>
+{{/if}}
+
+{{#if puedeEsperar}}
+  <form action="/referencias/{{referencia.codigo}}/esperar" method="POST" class="d-inline"
+        onsubmit="return confirm('¿Dejar esta referencia en espera de disponibilidad?');">
+    <button type="submit" class="btn btn-outline-secondary mb-3">Dejar en espera de disponibilidad</button>
+  </form>
+{{/if}}
+
+{{#if puedeRechazar}}
+  <div class="card mb-3">
+    <div class="card-header">Rechazar por información insuficiente</div>
+    <div class="card-body">
+      <form class="row g-2" action="/referencias/{{referencia.codigo}}/rechazar" method="POST"
+            onsubmit="return confirm('¿Rechazar esta referencia? El asilo verá el motivo.');">
+        <div class="col-12 col-md-9">
+          <label for="motivo" class="form-label">Motivo (lo verá el médico general del asilo) *</label>
+          <input type="text" id="motivo" name="motivo" class="form-control"
+                 required minlength="10" maxlength="255">
+        </div>
+        <div class="col-12 col-md-3 d-flex align-items-end">
+          <button type="submit" class="btn btn-outline-danger w-100">Rechazar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{{/if}}
+
+{{#unless puedeProgramar}}{{#unless puedeReprogramar}}
+  <p class="text-muted">Esta referencia ya no tiene acciones pendientes para la Fundación.</p>
+{{/unless}}{{/unless}}

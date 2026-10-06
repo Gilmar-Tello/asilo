@@ -1,0 +1,186 @@
+/* ===== PALETA DE COLORES DEL SISTEMA ===== */
+:root {
+  --azul: #1877f2;
+  --azul-oscuro: #0d5bc4;
+  --azul-claro: #eaf2fe;
+  --texto: #1c1e21;
+  --texto-suave: #65676b;
+  --borde: #dddfe2;
+  --fondo: #f0f2f5;
+
+  /* Colores de estado (comunican, no decoran) */
+  --exito: #42b72a;
+  --error: #dc3545;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #eef1f5;
+  padding: 20px;
+  margin: 0;
+}
+
+.formulario {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.formulario h2 {
+  margin-top: 0;
+  color: var(--texto);
+  text-align: left;
+}
+
+fieldset {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 15px 18px;
+  margin-bottom: 18px;
+}
+
+legend {
+  font-weight: bold;
+  color: var(--azul);
+  padding: 0 8px;
+  font-size: 15px;
+}
+
+.fila {
+  display: flex;
+  gap: 15px;
+}
+
+.grupo {
+  flex: 1;
+  margin-bottom: 12px;
+}
+
+.grupo label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #333;
+  font-size: 14px;
+}
+
+.grupo input,
+.grupo select {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 16px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.grupo input:focus,
+.grupo select:focus {
+  border-color: var(--azul);
+  outline: none;
+  box-shadow: 0 0 5px rgba(24, 119, 242, 0.3);
+}
+
+.grupo input:user-invalid,
+.grupo select:user-invalid {
+  border-color: var(--error);
+}
+
+.formulario button {
+  width: 100%;
+  padding: 12px;
+  background: var(--azul);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.formulario button:hover {
+  background: var(--azul-oscuro);
+}
+
+.formulario button:focus {
+  outline: 2px solid var(--azul-oscuro);
+  outline-offset: 2px;
+}
+
+.nota {
+  font-size: 12px;
+  color: #777;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+  .fila {
+    flex-direction: column;
+    gap: 0;
+  }
+}
+
+.grupo input {
+  text-transform: none;
+}   
+
+/* ===== LAYOUT DEL SISTEMA (navbar + menú) ===== */
+.cuerpo-sistema {
+  background: var(--fondo);
+  padding: 0;               /* el body del sistema no lleva el padding del login */
+  color: var(--texto);
+}
+
+.barra-superior {
+  background: var(--azul);
+}
+
+.menu-lateral {
+  background: var(--azul-claro);
+  border-right: 1px solid var(--borde);
+}
+
+.menu-lateral .nav-link {
+  color: var(--texto);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+
+.menu-lateral .nav-link:hover {
+  background: var(--azul);
+  color: #fff;
+}
+
+/* ===== SCROLL INDEPENDIENTE: menú lateral y contenido (solo escritorio) ===== */
+@media (min-width: 768px) {
+  .cuerpo-sistema {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;          /* la página ya no se desplaza: lo hacen las dos columnas */
+  }
+
+  .contenedor-sistema {
+    flex: 1;                   /* ocupa todo el alto que deja la barra superior */
+    min-height: 0;             /* permite que los hijos se encojan y así puedan hacer scroll */
+    padding: 0;
+  }
+
+  .contenedor-sistema > .row {
+    height: 100%;
+    margin: 0;
+  }
+
+  .menu-lateral,
+  .contenido-principal {
+    height: 100%;
+    overflow-y: auto;          /* cada columna tiene su propia barra de desplazamiento */
+    overscroll-behavior: contain;  /* al llegar al final, el scroll no "salta" a la otra columna */
+  }
+}

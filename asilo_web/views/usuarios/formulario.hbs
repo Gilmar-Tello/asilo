@@ -1,0 +1,131 @@
+<form class="formulario" action="{{accion}}" method="POST">
+  <h2>{{tituloForm}}</h2>
+
+  {{#if mensaje}}
+    <div class="alert alert-danger">{{mensaje}}</div>
+  {{/if}}
+
+  <fieldset>
+    <legend>Datos personales</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="primer_nombre">Primer Nombre *</label>
+        <input type="text" id="primer_nombre" name="primer_nombre" required
+               maxlength="30" value="{{usuarioForm.primer_nombre}}">
+      </div>
+      <div class="grupo">
+        <label for="segundo_nombre">Segundo Nombre</label>
+        <input type="text" id="segundo_nombre" name="segundo_nombre"
+               maxlength="30" value="{{usuarioForm.segundo_nombre}}">
+      </div>
+      <div class="grupo">
+        <label for="primer_apellido">Primer Apellido *</label>
+        <input type="text" id="primer_apellido" name="primer_apellido" required
+               maxlength="30" value="{{usuarioForm.primer_apellido}}">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="segundo_apellido">Segundo Apellido</label>
+        <input type="text" id="segundo_apellido" name="segundo_apellido"
+               maxlength="30" value="{{usuarioForm.segundo_apellido}}">
+      </div>
+      <div class="grupo">
+        <label for="dpi">No. DPI *</label>
+        <input type="text" id="dpi" name="dpi" required
+               pattern="[0-9]{13}" maxlength="13"
+               title="El DPI debe tener exactamente 13 dígitos"
+               placeholder="0000000000000" value="{{usuarioForm.dpi}}">
+      </div>
+      <div class="grupo">
+        <label for="telefono">No. de Teléfono {{#unless esEdicion}}*{{/unless}}</label>
+        <input type="tel" id="telefono" name="telefono" {{#unless esEdicion}}required{{/unless}}
+               pattern="[0-9]{8}" maxlength="8"
+               title="El teléfono debe tener 8 dígitos"
+               placeholder="00000000" value="{{usuarioForm.telefono}}">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="correo">Correo Electrónico *</label>
+        <input type="email" id="correo" name="correo" required
+               maxlength="80" value="{{usuarioForm.correo}}">
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Datos profesionales</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="titulo_academico">Título Académico</label>
+        <input type="text" id="titulo_academico" name="titulo_academico"
+               maxlength="50" value="{{usuarioForm.titulo_academico}}">
+      </div>
+      <div class="grupo">
+        <label for="id_especialidad">Especialidad</label>
+        <select id="id_especialidad" name="id_especialidad">
+          <option value="">Seleccione...</option>
+          {{#each especialidades}}
+            <option value="{{id_especialidad}}"
+              {{#if (eq id_especialidad ../usuarioForm.id_especialidad)}}selected{{/if}}>{{nombre}}</option>
+          {{/each}}
+        </select>
+        {{#if (puede 'especialidades:crear')}}
+          <small><a href="/especialidades/crear">¿No está? Créala primero</a></small>
+        {{/if}}
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Datos de acceso</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="usuario">Usuario *</label>
+        <input type="text" id="usuario" name="usuario" required data-sin-mayusculas
+               minlength="3" maxlength="20" value="{{usuarioForm.usuario}}">
+      </div>
+      <div class="grupo">
+        <label for="clave">
+          {{#if esEdicion}}Contraseña nueva (vacía = conservar la actual){{else}}Contraseña *{{/if}}
+        </label>
+        <input type="password" id="clave" name="clave" {{#unless esEdicion}}required{{/unless}}
+               maxlength="20" autocomplete="new-password">
+      </div>
+      <div class="grupo">
+        <label for="id_rol">Rol *</label>
+        <select id="id_rol" name="id_rol" required>
+          <option value="">Seleccione...</option>
+          {{#each roles}}
+            <option value="{{id_rol}}" data-requiere-especialidad="{{requiere_especialidad}}"
+              {{#if (eq id_rol ../usuarioForm.id_rol)}}selected{{/if}}>{{etiqueta}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+
+    {{#unless esEdicion}}
+      <div class="fila">
+        <div class="grupo">
+          <label for="estado">Estado *</label>
+          <select id="estado" name="estado" required>
+            <option value="activo">Activo</option>
+            <option value="inactivo" {{#if (eq usuarioForm.estado 'inactivo')}}selected{{/if}}>Inactivo</option>
+          </select>
+        </div>
+      </div>
+    {{/unless}}
+  </fieldset>
+
+  <button type="submit">{{#if esEdicion}}Guardar cambios{{else}}Crear usuario{{/if}}</button>
+  <p class="nota">Los campos marcados con * son obligatorios.
+    <a href="/usuarios">Cancelar y volver a la lista</a></p>
+</form>
+
+<script src="/js/usuarios.js"></script>

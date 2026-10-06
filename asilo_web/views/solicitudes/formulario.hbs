@@ -1,0 +1,86 @@
+<form class="formulario" action="/solicitudes/crear" method="POST">
+  <h2>Nueva solicitud de referencia</h2>
+
+  {{#if modoSimulado}}
+    <div class="alert alert-secondary">
+      Modo de prueba: la Fundación todavía no está conectada, así que sus respuestas son simuladas.
+    </div>
+  {{/if}}
+
+  {{#if avisoCatalogo}}
+    <div class="alert alert-warning">{{avisoCatalogo}}</div>
+  {{/if}}
+
+  {{#if mensaje}}
+    <div class="alert alert-danger">
+      {{mensaje}}
+      {{#if enlaceFicha}}<a href="{{enlaceFicha}}">Registrar padecimientos del interno</a>{{/if}}
+    </div>
+  {{/if}}
+
+  <fieldset>
+    <legend>Interno</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="buscar_interno">Interno a derivar *</label>
+
+        <div id="selector_interno" class="position-relative"
+             data-id="{{internoElegido.id_interno}}"
+             data-nombre="{{internoElegido.nombre_completo}}"
+             data-dpi="{{internoElegido.dpi}}">
+
+          <input type="hidden" id="id_interno" name="id_interno">
+
+          <input type="search" id="buscar_interno" autocomplete="off"
+                 placeholder="Escribe el nombre o el DPI (mínimo 2 caracteres)">
+
+          <div id="interno_elegido" class="alert alert-success py-2 mt-2 mb-0 d-none">
+            <span id="interno_elegido_texto"></span>
+            <a href="#" id="interno_cambiar" class="ms-2">Cambiar</a>
+          </div>
+
+          <div id="resultados_interno"
+               class="list-group position-absolute w-100 shadow d-none"
+               style="z-index: 1050;"></div>
+        </div>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Derivación</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="especialidad">Especialidad requerida *</label>
+        <select id="especialidad" name="especialidad" required>
+          <option value="">Seleccione...</option>
+          {{#each especialidades}}
+            <option value="{{this}}" {{#if (eq this ../solicitudForm.especialidad)}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+          <option value="__otra__" {{#if (eq solicitudForm.especialidad '__otra__')}}selected{{/if}}>Otra (fuera del catálogo de la Fundación)</option>
+        </select>
+      </div>
+      <div class="grupo" id="grupo_especialidad_otra" style="display: none;">
+        <label for="especialidad_otra">¿Cuál? *</label>
+        <input type="text" id="especialidad_otra" name="especialidad_otra"
+               maxlength="50" value="{{solicitudForm.especialidad_otra}}">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="evaluacion_inicial">Evaluación inicial del médico general *</label>
+        <textarea id="evaluacion_inicial" name="evaluacion_inicial" class="form-control"
+                  rows="5" required minlength="10" maxlength="2000">{{solicitudForm.evaluacion_inicial}}</textarea>
+      </div>
+    </div>
+  </fieldset>
+
+  <button type="submit">Crear y enviar a la Fundación</button>
+  <p class="nota"><a href="/solicitudes">Cancelar y volver a la lista</a></p>
+</form>
+
+<script src="/js/selector-interno.js"></script>
+<script src="/js/solicitudes.js"></script>

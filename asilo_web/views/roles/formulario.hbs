@@ -1,0 +1,58 @@
+<form class="formulario" action="{{accion}}" method="POST">
+  <h2>{{tituloForm}}</h2>
+
+  {{#if mensaje}}
+    <div class="alert alert-danger">{{mensaje}}</div>
+  {{/if}}
+
+  <fieldset>
+    <legend>Datos del rol</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="nombre">Nombre *</label>
+        <input type="text" id="nombre" name="nombre" required
+               minlength="3" maxlength="50" value="{{rolForm.nombre}}">
+      </div>
+      <div class="grupo">
+        <label for="descripcion">Descripción</label>
+        <input type="text" id="descripcion" name="descripcion"
+               maxlength="150" value="{{rolForm.descripcion}}">
+      </div>
+    </div>
+
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" id="requiere_especialidad"
+             name="requiere_especialidad" value="1"
+             {{#if rolForm.requiere_especialidad}}checked{{/if}}>
+      <label class="form-check-label" for="requiere_especialidad">
+        Exigir título y especialidad al crear usuarios con este rol
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Permisos</legend>
+
+    {{#each grupos}}
+      <div class="mb-3">
+        <div class="text-uppercase small fw-bold text-secondary mb-1">{{modulo}}</div>
+        {{#each permisos}}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="permisos"
+                   id="permiso_{{id_permiso}}" value="{{id_permiso}}"
+                   {{#if marcado}}checked{{/if}}>
+            <label class="form-check-label" for="permiso_{{id_permiso}}">
+              {{descripcion}} <small class="text-muted">({{clave}})</small>
+            </label>
+          </div>
+        {{/each}}
+      </div>
+    {{else}}
+      <p class="text-muted mb-0">No hay permisos definidos en el sistema.</p>
+    {{/each}}
+  </fieldset>
+
+  <button type="submit">Guardar rol</button>
+  <p class="nota"><a href="/roles">Cancelar y volver a la lista</a></p>
+</form>

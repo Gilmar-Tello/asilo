@@ -1,0 +1,67 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Padecimientos de los internos</h2>
+</div>
+
+<p class="text-muted">
+  Busca al interno para ver o registrar sus padecimientos. Para derivarlo a un especialista
+  (solicitud de referencia) necesita al menos un padecimiento vigente.
+</p>
+
+<form class="row g-2 mb-4" action="/padecimientos" method="GET">
+  <div class="col-12 col-md-6">
+    <input type="text" name="busqueda" class="form-control"
+           placeholder="Buscar por nombre o DPI" value="{{busqueda}}">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-primary">Buscar</button>
+  </div>
+  {{#if busqueda}}
+    <div class="col-auto">
+      <a href="/padecimientos" class="btn btn-outline-secondary">Limpiar</a>
+    </div>
+  {{/if}}
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Interno</th>
+        <th>DPI</th>
+        <th>Edad</th>
+        <th>Padecimientos vigentes</th>
+        <th class="text-end">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lista}}
+        <tr>
+          <td>
+            {{nombre_completo}}
+            {{#unless (eq estado 1)}}<span class="badge text-bg-secondary">Inactivo</span>{{/unless}}
+          </td>
+          <td>{{dpi}}</td>
+          <td>{{edad}} años</td>
+          <td>
+            {{#if total_padecimientos}}
+              <span class="badge text-bg-success">{{total_padecimientos}}</span>
+            {{else}}
+              <span class="badge text-bg-warning">Sin padecimientos</span>
+            {{/if}}
+          </td>
+          <td class="text-end">
+            <a href="/padecimientos/interno/{{id_interno}}" class="btn btn-sm btn-outline-primary">
+              {{#if (puede 'psicopatologias:crear')}}Ver y registrar{{else}}Ver{{/if}}
+            </a>
+          </td>
+        </tr>
+      {{else}}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">No se encontraron internos.</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<p class="text-muted small">{{lista.length}} interno(s) (se muestran hasta 100; usa el buscador para acotar).</p>

@@ -1,0 +1,25 @@
+{
+  "name": "fundacion_web",
+  "version": "1.0.0",
+  "description": "Sistema de la Fundación: recibe las solicitudes de referencia del asilo, programa citas y especialistas, y expone su API",
+  "main": "app.js",
+  "scripts": {
+    "dev": "nodemon app.js",
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-handlebars": "^9.0.1",
+    "express-session": "^1.19.0",
+    "mysql2": "^3.24.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

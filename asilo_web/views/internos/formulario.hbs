@@ -1,0 +1,172 @@
+<form class="formulario" action="{{accion}}" method="POST">
+  <h2>{{tituloForm}}</h2>
+
+  {{#if mensaje}}
+    <div class="alert alert-danger">{{mensaje}}</div>
+  {{/if}}
+
+  <fieldset>
+    <legend>Datos del interno</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="primer_nombre">Primer Nombre *</label>
+        <input type="text" id="primer_nombre" name="primer_nombre" required
+               maxlength="30" value="{{internoForm.primer_nombre}}">
+      </div>
+      <div class="grupo">
+        <label for="segundo_nombre">Segundo Nombre</label>
+        <input type="text" id="segundo_nombre" name="segundo_nombre"
+               maxlength="30" value="{{internoForm.segundo_nombre}}">
+      </div>
+      <div class="grupo">
+        <label for="primer_apellido">Primer Apellido *</label>
+        <input type="text" id="primer_apellido" name="primer_apellido" required
+               maxlength="30" value="{{internoForm.primer_apellido}}">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="segundo_apellido">Segundo Apellido</label>
+        <input type="text" id="segundo_apellido" name="segundo_apellido"
+               maxlength="30" value="{{internoForm.segundo_apellido}}">
+      </div>
+      <div class="grupo">
+        <label for="apellido_casada">Apellido de Casada</label>
+        <input type="text" id="apellido_casada" name="apellido_casada"
+               maxlength="30" value="{{internoForm.apellido_casada}}">
+      </div>
+      <div class="grupo">
+        <label for="sexo">Sexo *</label>
+        <select id="sexo" name="sexo" required>
+          <option value="">Seleccione...</option>
+          <option value="M" {{#if (eq internoForm.sexo 'M')}}selected{{/if}}>Masculino</option>
+          <option value="F" {{#if (eq internoForm.sexo 'F')}}selected{{/if}}>Femenino</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="dpi">No. DPI *</label>
+        <input type="text" id="dpi" name="dpi" required
+               pattern="[0-9]{13}" maxlength="13"
+               title="El DPI debe tener exactamente 13 dígitos"
+               placeholder="0000000000000" value="{{internoForm.dpi}}">
+      </div>
+      <div class="grupo">
+        <label for="fecha_nacimiento">Fecha de Nacimiento *</label>
+        <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required
+               max="{{hoy}}" value="{{internoForm.fecha_nacimiento}}">
+      </div>
+      <div class="grupo">
+        <label for="fecha_ingreso">Fecha de Ingreso *</label>
+        <input type="date" id="fecha_ingreso" name="fecha_ingreso" required
+               max="{{hoy}}" value="{{internoForm.fecha_ingreso}}">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="padecimientos">Estado de salud (observaciones generales)</label>
+        <input type="text" id="padecimientos" name="padecimientos"
+               maxlength="500" value="{{internoForm.padecimientos}}">
+      </div>
+    </div>
+  </fieldset>
+
+  {{!-- Padecimientos: solo al registrar (después se manejan desde "Padecimientos") y solo si el
+        usuario tiene el permiso para crearlos --}}
+  {{#unless internoForm.id_interno}}
+    {{#if (puede 'psicopatologias:crear')}}
+      <fieldset>
+        <legend>Padecimientos del interno (opcional)</legend>
+
+        <p class="nota">
+          Si el interno ya padece algo, regístralo aquí. Para derivarlo a un especialista hace falta
+          al menos uno. Más adelante se pueden agregar o anular desde el menú «Padecimientos».
+        </p>
+
+        <div id="lista_padecimientos">
+          {{#each padecimientosForm}}
+            <div class="fila fila-padecimiento">
+              <div class="grupo">
+                <label>Padecimiento</label>
+                <input type="text" name="padecimiento_nombre[]" maxlength="150" value="{{nombre}}">
+              </div>
+              <div class="grupo">
+                <label>Medicamento de cajón</label>
+                <input type="text" name="padecimiento_medicamento[]" maxlength="150" value="{{medicamento}}">
+              </div>
+              <div class="grupo">
+                <label>Dosis</label>
+                <input type="text" name="padecimiento_dosis[]" maxlength="100" value="{{dosis}}">
+              </div>
+            </div>
+          {{/each}}
+        </div>
+
+        <p class="nota"><a href="#" id="agregar_padecimiento">+ Agregar otro padecimiento</a></p>
+      </fieldset>
+    {{/if}}
+  {{/unless}}
+
+  <fieldset>
+    <legend>Familiar responsable</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="buscar_familiar">Familiar responsable *</label>
+
+        <div id="selector_familiar" class="position-relative"
+             data-id="{{familiarElegido.id_familiar}}"
+             data-nombre="{{familiarElegido.nombre_completo}}"
+             data-dpi="{{familiarElegido.dpi}}">
+
+          <input type="hidden" id="id_familiar" name="id_familiar">
+
+          <input type="search" id="buscar_familiar" autocomplete="off"
+                 placeholder="Escribe el nombre o el DPI (mínimo 2 caracteres)">
+
+          <div id="familiar_elegido" class="alert alert-success py-2 mt-2 mb-0 d-none">
+            <span id="familiar_elegido_texto"></span>
+            <a href="#" id="familiar_cambiar" class="ms-2">Cambiar</a>
+          </div>
+
+          <div id="resultados_familiar"
+               class="list-group position-absolute w-100 shadow d-none"
+               style="z-index: 1050;"></div>
+        </div>
+      </div>
+
+      <div class="grupo">
+        <label for="id_parentesco">Parentesco *</label>
+        <select id="id_parentesco" name="id_parentesco" required>
+          <option value="">Seleccione...</option>
+          {{#each parentescos}}
+            <option value="{{id_parentesco}}"
+              {{#if (eq id_parentesco ../internoForm.id_parentesco)}}selected{{/if}}>{{nombre}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+
+    {{#if (puede 'familiares:crear' 'parentescos:crear')}}
+      <p class="nota">
+        ¿No aparece?
+        {{#if (puede 'familiares:crear')}}<a href="/familiares/crear">Registra al familiar</a>{{/if}}
+        {{#if (puede 'parentescos:crear')}}<a href="/parentescos/crear">agrega un parentesco</a>{{/if}}
+        primero.
+      </p>
+    {{else}}
+      <p class="nota">¿No aparece? Pídele al administrador que lo registre.</p>
+    {{/if}}
+  </fieldset>
+
+  <button type="submit">Guardar interno</button>
+  <p class="nota"><a href="/internos">Cancelar y volver a la lista</a></p>
+</form>
+
+<script src="/js/selector-familiar.js"></script>
+<script src="/js/padecimientos-interno.js"></script>

@@ -1,0 +1,137 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-1">Solicitud #{{solicitud.id_solicitud}}</h2>
+    <span class="badge {{solicitud.clase_estado}} fs-6">{{solicitud.estado}}</span>
+  </div>
+  <a href="/solicitudes" class="btn btn-outline-secondary">Volver a la lista</a>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<div class="row g-3 mb-3">
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Interno</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>{{solicitud.interno_nombre}}</strong></p>
+        <p class="mb-1">{{solicitud.interno_edad}} años ·
+          {{#if (eq solicitud.interno_sexo 'M')}}Masculino{{else}}Femenino{{/if}}</p>
+        <p class="mb-1">Especialidad requerida: <strong>{{solicitud.especialidad_requerida}}</strong>
+          {{#if solicitud.es_externa}}<span class="badge text-bg-light border">Externa</span>{{/if}}
+        </p>
+        {{#if veTodas}}
+          <p class="mb-1 text-muted">Médico general: {{solicitud.medico_nombre}}</p>
+          <p class="mb-1 text-muted">Creada: {{solicitud.fecha_creacion_texto}}</p>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Cita</div>
+      <div class="card-body">
+        <p class="mb-1">Fecha y hora:
+          <strong>{{#if solicitud.fecha_cita_texto}}{{solicitud.fecha_cita_texto}}{{else}}Sin programar{{/if}}</strong></p>
+        <p class="mb-1">Especialista:
+          <strong>{{#if solicitud.especialista_nombre}}{{solicitud.especialista_nombre}}{{else}}Sin asignar{{/if}}</strong></p>
+        <p class="mb-1">Enfermero que acompaña:
+          <strong>{{#if solicitud.enfermero_nombre}}{{solicitud.enfermero_nombre}}{{else}}Sin asignar{{/if}}</strong></p>
+        {{#if solicitud.motivo_rechazo}}
+          <div class="alert alert-danger mt-2 mb-0">
+            <strong>Motivo del rechazo:</strong> {{solicitud.motivo_rechazo}}
+          </div>
+        {{/if}}
+        {{#if veTodas}}
+          <hr>
+          <p class="mb-1 small text-muted">
+            Código en la Fundación:
+            {{#if solicitud.codigo_fundacion}}{{solicitud.codigo_fundacion}}{{else}}pendiente de enviar{{/if}}
+          </p>
+          <p class="mb-0 small text-muted">
+            Última consulta a la Fundación:
+            {{#if solicitud.sincronizacion_texto}}{{solicitud.sincronizacion_texto}}{{else}}nunca{{/if}}
+          </p>
+          <p class="mb-0 small {{#if modoSimulado}}text-warning-emphasis{{else}}text-success{{/if}}">
+            {{#if modoSimulado}}Fundación en modo de prueba (respuestas simuladas){{else}}Conectada a la Fundación por API{{/if}}
+          </p>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{{#if veTodas}}
+  <div class="card mb-3">
+    <div class="card-header">Evaluación inicial</div>
+    <div class="card-body">
+      <p class="mb-0" style="white-space: pre-line;">{{solicitud.evaluacion_inicial}}</p>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">Padecimientos del interno</div>
+    <ul class="list-group list-group-flush">
+      {{#each padecimientos}}
+        <li class="list-group-item {{#if anulada}}text-muted{{/if}}">
+          {{#if anulada}}<s>{{nombre_padecimiento}}</s> <span class="badge text-bg-secondary">Anulado</span>
+          {{else}}<strong>{{nombre_padecimiento}}</strong>{{/if}}
+          {{#if medicamento_cajon}}<span class="small"> · {{medicamento_cajon}} {{dosis}}</span>{{/if}}
+        </li>
+      {{else}}
+        <li class="list-group-item text-muted">Sin padecimientos registrados.</li>
+      {{/each}}
+    </ul>
+  </div>
+{{/if}}
+
+{{#if puedeSincronizar}}
+  <form action="/solicitudes/{{solicitud.id_solicitud}}/sincronizar" method="POST" class="d-inline">
+    {{#if solicitud.codigo_fundacion}}
+      <button type="submit" class="btn btn-outline-primary">Consultar a la Fundación</button>
+    {{else}}
+      <button type="submit" class="btn btn-warning">Enviar a la Fundación</button>
+    {{/if}}
+  </form>
+{{/if}}
+
+{{#if puedeAsignar}}
+  <div class="card mt-3">
+    <div class="card-header">Enfermero que acompaña</div>
+    <div class="card-body">
+      {{#if agendada}}
+        {{#if enfermeros}}
+          <form class="row g-2" action="/solicitudes/{{solicitud.id_solicitud}}/enfermero" method="POST">
+            <div class="col-12 col-md-6">
+              <select name="id_enfermero" class="form-select" required>
+                <option value="">Seleccione un enfermero disponible...</option>
+                {{#each enfermeros}}
+                  <option value="{{id_usuario}}" {{#if asignado}}selected{{/if}}>{{nombre}}</option>
+                {{/each}}
+              </select>
+            </div>
+            <div class="col-auto">
+              <button type="submit" class="btn btn-primary">Asignar</button>
+            </div>
+          </form>
+          <p class="small text-muted mt-2 mb-0">
+            Se muestran los enfermeros activos que no tienen otra cita a menos de 2 horas de esta.
+          </p>
+        {{else}}
+          <p class="mb-0 text-muted">
+            No hay enfermeros disponibles para esa hora. Crea un rol con el permiso
+            «Ver solo las solicitudes que debo acompañar» y un usuario con ese rol.
+          </p>
+        {{/if}}
+      {{else}}
+        <p class="mb-0 text-muted">
+          Se podrá asignar un enfermero cuando la Fundación programe la cita.
+        </p>
+      {{/if}}
+    </div>
+  </div>
+{{/if}}

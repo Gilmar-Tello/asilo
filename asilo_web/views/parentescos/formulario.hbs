@@ -1,0 +1,23 @@
+<form class="formulario" action="{{accion}}" method="POST">
+  <h2>{{tituloForm}}</h2>
+
+  {{#if mensaje}}
+    <div class="alert alert-danger">{{mensaje}}</div>
+  {{/if}}
+
+  <fieldset>
+    <legend>Datos del parentesco</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="nombre">Nombre *</label>
+        <input type="text" id="nombre" name="nombre" required
+               minlength="3" maxlength="30"
+               placeholder="Ejemplo: Cuñado(a)" value="{{parentescoForm.nombre}}">
+      </div>
+    </div>
+  </fieldset>
+
+  <button type="submit">Guardar parentesco</button>
+  <p class="nota"><a href="/parentescos">Cancelar y volver a la lista</a></p>
+</form>

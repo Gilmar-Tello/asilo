@@ -1,0 +1,107 @@
+<form class="formulario" action="/internos/registro" method="POST">
+  <h2>Registro de internos</h2>
+
+  <fieldset>
+    <legend>Datos del interno</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="primer_nombre">Primer Nombre *</label>
+        <input type="text" id="primer_nombre" name="primer_nombre" required maxlength="30">
+      </div>
+      <div class="grupo">
+        <label for="segundo_nombre">Segundo Nombre</label>
+        <input type="text" id="segundo_nombre" name="segundo_nombre" maxlength="30">
+      </div>
+      <div class="grupo">
+        <label for="primer_apellido">Primer Apellido *</label>
+        <input type="text" id="primer_apellido" name="primer_apellido" required maxlength="30">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="segundo_apellido">Segundo Apellido</label>
+        <input type="text" id="segundo_apellido" name="segundo_apellido" maxlength="30">
+      </div>
+      <div class="grupo">
+        <label for="apellido_casada">Apellido de Casada</label>
+        <input type="text" id="apellido_casada" name="apellido_casada" maxlength="30">
+      </div>
+      <div class="grupo">
+        <label for="sexo">Sexo *</label>
+        <select id="sexo" name="sexo" required>
+          <option value="">Seleccione...</option>
+          <option value="M">Masculino</option>
+          <option value="F">Femenino</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="dpi">No. DPI *</label>
+        <input type="text" id="dpi" name="dpi" required
+               pattern="[0-9]{13}" maxlength="13"
+               title="El DPI debe tener exactamente 13 dígitos"
+               placeholder="0000000000000">
+      </div>
+      <div class="grupo">
+        <label for="fecha_nacimiento">Fecha de Nacimiento *</label>
+        <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required>
+      </div>
+      <div class="grupo">
+        <label for="fecha_ingreso">Fecha de Ingreso *</label>
+        <input type="date" id="fecha_ingreso" name="fecha_ingreso" required>
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="padecimientos">Padecimientos</label>
+        <input type="text" id="padecimientos" name="padecimientos" maxlength="100">
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Datos del responsable</legend>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="responsable">Nombre de Responsable *</label>
+        <input type="text" id="responsable" name="responsable" required maxlength="80">
+      </div>
+      <div class="grupo">
+        <label for="parentesco">Parentesco *</label>
+        <select id="parentesco" name="parentesco" required>
+          <option value="">Seleccione...</option>
+          <option value="Hijo(a)">Hijo(a)</option>
+          <option value="Nieto(a)">Nieto(a)</option>
+          <option value="Hermano(a)">Hermano(a)</option>
+          <option value="Sobrino(a)">Sobrino(a)</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="grupo">
+        <label for="telefono">No. de Teléfono *</label>
+        <input type="tel" id="telefono" name="telefono" required
+               pattern="[0-9]{8}" maxlength="8"
+               title="El teléfono debe tener 8 dígitos"
+               placeholder="00000000">
+      </div>
+    </div>
+
+    <div class="fila">
+      <div class="grupo">
+        <label for="correo">Correo Electrónico</label>
+        <input type="email" id="correo" name="correo" maxlength="80">
+      </div>
+    </div>
+  </fieldset>
+
+  <button type="submit">Guardar</button>
+  <p class="nota">Los campos marcados con * son obligatorios</p>
+</form>
+
+<script src="/js/registro.js"></script>

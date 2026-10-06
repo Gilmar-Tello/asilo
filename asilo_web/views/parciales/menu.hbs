@@ -1,0 +1,83 @@
+<div class="col-md-3 col-lg-2 offcanvas-md offcanvas-start p-3 menu-lateral"
+     tabindex="-1" id="menuLateral">
+
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Menú</h5>
+    <button type="button" class="btn-close d-md-none"
+            data-bs-dismiss="offcanvas" data-bs-target="#menuLateral"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <ul class="nav flex-column">
+
+      {{!-- Cada opción aparece solo si el rol del usuario tiene el permiso.
+            El administrador (rol de sistema) ve todo. --}}
+      {{#if (puede 'usuarios:ver' 'roles:gestionar' 'internos:ver' 'familiares:ver' 'parentescos:ver' 'especialidades:ver')}}
+        <li class="nav-item mt-2">
+          <span class="text-uppercase small fw-bold text-secondary px-3">Administración</span>
+        </li>
+
+        {{#if (puede 'usuarios:ver')}}
+          <li class="nav-item"><a class="nav-link" href="/usuarios">Usuarios del sistema</a></li>
+        {{/if}}
+        {{#if (puede 'roles:gestionar')}}
+          <li class="nav-item"><a class="nav-link" href="/roles">Roles y permisos</a></li>
+        {{/if}}
+        {{#if (puede 'internos:ver')}}
+          <li class="nav-item"><a class="nav-link" href="/internos">Internos</a></li>
+        {{/if}}
+        {{#if (puede 'familiares:ver')}}
+          <li class="nav-item"><a class="nav-link" href="/familiares">Familiares responsables</a></li>
+        {{/if}}
+        {{#if (puede 'parentescos:ver')}}
+          <li class="nav-item"><a class="nav-link" href="/parentescos">Parentescos</a></li>
+        {{/if}}
+        {{#if (puede 'especialidades:ver')}}
+          <li class="nav-item"><a class="nav-link" href="/especialidades">Especialidades</a></li>
+        {{/if}}
+      {{/if}}
+
+      {{#if (puede 'solicitudes:ver' 'solicitudes:ver_asignadas')}}
+        <li class="nav-item mt-2">
+          <a class="nav-link" href="/solicitudes">
+            {{#if (puede 'solicitudes:ver')}}Solicitudes{{else}}Mis acompañamientos{{/if}}
+          </a>
+        </li>
+      {{/if}}
+
+      {{#if (puede 'psicopatologias:ver')}}
+        <li class="nav-item mt-2">
+          <a class="nav-link" href="/padecimientos">Padecimientos</a>
+        </li>
+      {{/if}}
+
+      {{!-- Estos módulos todavía no existen ni tienen permisos: por ahora solo los ve el
+            administrador. Cuando se construya cada uno, se le crean sus permisos y se pasa
+            arriba, con su propio if (puede ...). --}}
+      {{#if rolEsSistema}}
+        <li class="nav-item mt-3">
+          <span class="text-uppercase small fw-bold text-secondary px-3">Atención médica</span>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="#">Visitas médicas</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Exámenes de laboratorio</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Medicamentos</a></li>
+
+        <li class="nav-item mt-3">
+          <span class="text-uppercase small fw-bold text-secondary px-3">Finanzas</span>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="#">Caja (entradas y salidas)</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Cuotas de familiares</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Donaciones</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Facturación</a></li>
+        <li class="nav-item"><a class="nav-link" href="#">Pagos a la Fundación</a></li>
+
+        <li class="nav-item mt-3">
+          <span class="text-uppercase small fw-bold text-secondary px-3">Reportes</span>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="#">Reportes del sistema</a></li>
+      {{/if}}
+
+    </ul>
+  </div>
+
+</div>
