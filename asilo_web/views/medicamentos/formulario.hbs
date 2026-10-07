@@ -1,0 +1,147 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">{{#if esNuevo}}Nuevo medicamento{{else}}{{medicamentoForm.nombre}} {{medicamentoForm.presentacion}}{{/if}}</h2>
+  <div>
+    {{#unless esNuevo}}{{#if (eq medicamentoForm.estado 1)}}
+      <a href="/medicamentos/{{medicamentoForm.id_medicamento}}/ingreso" class="btn btn-success">+ Ingresar lote</a>
+    {{/if}}{{/unless}}
+    <a href="/medicamentos" class="btn btn-outline-secondary">Volver a la lista</a>
+  </div>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{#if tipo}}{{tipo}}{{else}}danger{{/if}}">{{mensaje}}</div>
+{{/if}}
+
+<form action="{{#if esNuevo}}/medicamentos/crear{{else}}/medicamentos/{{medicamentoForm.id_medicamento}}/editar{{/if}}" method="POST">
+  <div class="card mb-3">
+    <div class="card-header">Datos del medicamento</div>
+    <div class="card-body row g-3">
+      <div class="col-12 col-md-6">
+        <label for="nombre" class="form-label">Nombre *</label>
+        <input type="text" class="form-control" id="nombre" name="nombre" required minlength="2" maxlength="100"
+               value="{{medicamentoForm.nombre}}" placeholder="Ej. LOSARTAN">
+      </div>
+      <div class="col-12 col-md-6">
+        <label for="presentacion" class="form-label">Presentación</label>
+        <input type="text" class="form-control" id="presentacion" name="presentacion" maxlength="60"
+               value="{{medicamentoForm.presentacion}}" placeholder="Ej. TABLETA 50 MG">
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="precio" class="form-label">Precio de venta (Q) *</label>
+        <input type="number" class="form-control" id="precio" name="precio" required min="0" max="99999.99" step="0.01"
+               value="{{medicamentoForm.precio}}">
+        <div class="form-text">Por unidad. Es lo que se cobra al despachar.</div>
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="existencia_minima" class="form-label">Existencia mínima</label>
+        <input type="number" class="form-control" id="existencia_minima" name="existencia_minima" min="0" max="99999" step="1"
+               value="{{medicamentoForm.existencia_minima}}">
+        <div class="form-text">Por debajo de esto se avisa "Bajo el mínimo".</div>
+      </div>
+      {{#unless esNuevo}}
+        <div class="col-6 col-md-3">
+          <label class="form-label">Existencia total</label>
+          <input type="text" class="form-control" value="{{medicamentoForm.existencia}}" disabled>
+          <div class="form-text">Cambia con lotes, despachos y bajas.</div>
+        </div>
+      {{/unless}}
+    </div>
+  </div>
+
+  {{#if esNuevo}}
+    <div class="card mb-3">
+      <div class="card-header">Primer lote <span class="small text-muted">(opcional: déjalo vacío si todavía no hay existencia)</span></div>
+      <div class="card-body row g-3">
+        <div class="col-6 col-md-2">
+          <label for="cantidad" class="form-label">Cantidad</label>
+          <input type="number" class="form-control" id="cantidad" name="cantidad" min="0" max="99999" step="1"
+                 value="{{loteForm.cantidad}}" placeholder="0">
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="numero_lote" class="form-label">Número de lote</label>
+          <input type="text" class="form-control" id="numero_lote" name="numero_lote" maxlength="40" value="{{loteForm.numero_lote}}">
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="fecha_vencimiento" class="form-label">Fecha de vencimiento</label>
+          <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" min="{{manana}}" value="{{loteForm.fecha_vencimiento}}">
+        </div>
+        <div class="col-6 col-md-2">
+          <label for="precio_compra" class="form-label">Precio de compra (Q)</label>
+          <input type="number" class="form-control" id="precio_compra" name="precio_compra" min="0" max="99999.99" step="0.01" value="{{loteForm.precio_compra}}">
+        </div>
+        <div class="col-12 col-md-2">
+          <label for="proveedor" class="form-label">Proveedor</label>
+          <input type="text" class="form-control" id="proveedor" name="proveedor" maxlength="100" value="{{loteForm.proveedor}}">
+        </div>
+        <div class="col-12 form-text mt-1">Si escribes una cantidad, la fecha de vencimiento y el precio de compra son obligatorios.</div>
+      </div>
+    </div>
+  {{/if}}
+
+  <button type="submit" class="btn btn-primary mb-4">{{#if esNuevo}}Agregar al catálogo{{else}}Guardar cambios{{/if}}</button>
+</form>
+
+{{#unless esNuevo}}
+  <h5>Lotes</h5>
+  <div class="table-responsive mb-4">
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr><th>Lote</th><th>Vence</th><th class="text-end">P. compra</th><th>Proveedor</th><th class="text-end">Existencia</th><th>Ingreso</th><th></th></tr>
+      </thead>
+      <tbody>
+        {{#each lotes}}
+          <tr class="{{#if vencido}}table-danger{{/if}}{{#unless existencia}} text-muted{{/unless}}">
+            <td>{{#if numero_lote}}{{numero_lote}}{{else}}<span class="text-muted">sin número</span>{{/if}}</td>
+            <td>
+              {{#if vencimiento_texto}}{{vencimiento_texto}}{{else}}<span class="text-muted">—</span>{{/if}}
+              {{#if vencido}}<span class="badge text-bg-danger">Vencido</span>{{/if}}
+              {{#if porVencer}}{{#if existencia}}<span class="badge text-bg-warning">{{dias_para_vencer}} día(s)</span>{{/if}}{{/if}}
+            </td>
+            <td class="text-end">Q {{precio_compra}}</td>
+            <td>{{proveedor}}</td>
+            <td class="text-end">{{existencia}} / {{cantidad_inicial}}</td>
+            <td>{{ingreso_texto}}</td>
+            <td class="text-end">
+              {{#if puedeDarDeBaja}}
+                <form action="/medicamentos/lotes/{{id_lote}}/baja" method="POST" class="d-inline"
+                      onsubmit="return confirm('¿Dar de baja las {{existencia}} unidad(es) vencidas de este lote?');">
+                  <input type="hidden" name="id_medicamento" value="{{../medicamentoForm.id_medicamento}}">
+                  <button class="btn btn-sm btn-outline-danger">Dar de baja</button>
+                </form>
+              {{/if}}
+            </td>
+          </tr>
+        {{else}}
+          <tr><td colspan="7" class="text-muted text-center">Sin lotes todavía. Usa "+ Ingresar lote".</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  <h5>Últimos movimientos de inventario</h5>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr><th>Fecha</th><th>Tipo</th><th>Lote</th><th class="text-end">Cantidad</th><th>Usuario</th><th>Despacho</th></tr>
+      </thead>
+      <tbody>
+        {{#each movimientos}}
+          <tr>
+            <td>{{fecha_texto}}</td>
+            <td>
+              {{#if (eq tipo 'Ingreso')}}<span class="badge text-bg-success">Ingreso</span>{{/if}}
+              {{#if (eq tipo 'Despacho')}}<span class="badge text-bg-primary">Despacho</span>{{/if}}
+              {{#if (eq tipo 'Baja')}}<span class="badge text-bg-danger">Baja por vencimiento</span>{{/if}}
+            </td>
+            <td>{{numero_lote}}</td>
+            <td class="text-end">{{#if (eq tipo 'Ingreso')}}+{{else}}-{{/if}}{{cantidad}}</td>
+            <td>{{usuario_nombre}}</td>
+            <td>{{#if id_despacho}}<a href="/farmacia/despachos/{{id_despacho}}">#{{id_despacho}}</a>{{/if}}</td>
+          </tr>
+        {{else}}
+          <tr><td colspan="6" class="text-muted text-center">Sin movimientos todavía.</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+{{/unless}}

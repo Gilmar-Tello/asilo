@@ -93,7 +93,19 @@ async function rechazar(id, motivo) {
   await pool.query(sql, [motivo, id]);
 }
 
+// El asilo avisa que el especialista ya atendió al interno. Solo una cita programada puede pasar
+// a "Atendida" (RN3: los estados avanzan en orden). Devuelve cuántas filas cambió (0 = no estaba programada).
+async function marcarAtendida(id) {
+  const sql = `
+    UPDATE tbl_referencias
+       SET estado = 'Atendida'
+     WHERE id_referencia = ? AND estado IN ('Programada', 'Reprogramada')
+  `;
+  const [resultado] = await pool.query(sql, [id]);
+  return resultado.affectedRows;
+}
+
 module.exports = {
   listar, buscarPorCodigo, buscarPorSolicitudAsilo, crear,
-  programar, ponerEnEspera, rechazar
+  programar, ponerEnEspera, rechazar, marcarAtendida
 };

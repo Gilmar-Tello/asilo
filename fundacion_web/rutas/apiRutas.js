@@ -8,6 +8,7 @@ router.use(exigirApiKey);
 
 router.post('/referencias',          apiControlador.recibirReferencia);
 router.get('/referencias/:codigo',   apiControlador.consultarReferencia);
+router.put('/referencias/:codigo/atendida', apiControlador.marcarAtendida);
 router.get('/especialidades',        apiControlador.listarEspecialidades);
 router.put('/especialistas',         apiControlador.sincronizarEspecialistas);
 

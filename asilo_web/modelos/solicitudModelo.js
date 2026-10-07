@@ -104,13 +104,14 @@ async function marcarPublicada(id, codigo, estado) {
 async function aplicarDeFundacion(id, datos) {
   const sql = `
     UPDATE tbl_solicitudes_referencia
-       SET estado = ?, fecha_cita = ?, especialista_nombre = ?, motivo_rechazo = ?,
+       SET estado = ?, fecha_cita = ?, especialista_nombre = ?, id_especialista = ?, motivo_rechazo = ?,
            id_enfermero_asignado = IF(?, NULL, id_enfermero_asignado),
            ultima_sincronizacion = NOW()
-     WHERE id_solicitud = ?
+     WHERE id_solicitud = ? AND estado <> 'Atendida'
   `;
+  // "AND estado <> 'Atendida'": si la visita ya se registró, la Fundación no puede revivir la solicitud
   await pool.query(sql, [
-    datos.estado, datos.fecha_cita, datos.especialista_nombre, datos.motivo_rechazo,
+    datos.estado, datos.fecha_cita, datos.especialista_nombre, datos.id_especialista, datos.motivo_rechazo,
     datos.desasignar ? 1 : 0, id
   ]);
 }
@@ -158,7 +159,24 @@ async function listarParaSincronizar() {
   return filas;
 }
 
+// Solicitudes ya atendidas cuya Fundación todavía no fue avisada
+async function listarAtendidasSinNotificar() {
+  const sql = `
+    SELECT id_solicitud, codigo_fundacion
+    FROM tbl_solicitudes_referencia
+    WHERE estado = 'Atendida' AND atendida_notificada = 0 AND codigo_fundacion IS NOT NULL
+    ORDER BY id_solicitud
+  `;
+  const [filas] = await pool.query(sql);
+  return filas;
+}
+
+async function marcarAtendidaNotificada(id) {
+  await pool.query(`UPDATE tbl_solicitudes_referencia SET atendida_notificada = 1 WHERE id_solicitud = ?`, [id]);
+}
+
 module.exports = {
+  listarAtendidasSinNotificar, marcarAtendidaNotificada,
   ESTADOS_ACTIVOS,
   listar, buscarPorId, crear, marcarPublicada, aplicarDeFundacion,
   asignarEnfermero, listarEnfermerosDisponibles, listarParaSincronizar

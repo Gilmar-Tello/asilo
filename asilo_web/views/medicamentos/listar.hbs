@@ -1,0 +1,80 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Medicamentos e inventario</h2>
+    <div class="text-muted">Catálogo de la farmacia: precio de venta, existencia por lotes y vencimientos</div>
+  </div>
+  {{#if (puede 'medicamentos:gestionar')}}
+    <a href="/medicamentos/crear" class="btn btn-primary">Nuevo medicamento</a>
+  {{/if}}
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<form class="row g-2 mb-3" action="/medicamentos" method="GET">
+  <div class="col-12 col-md-6">
+    <input type="text" class="form-control" name="q" value="{{busqueda}}" placeholder="Buscar por nombre o presentación" maxlength="100">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-primary">Buscar</button>
+    {{#if busqueda}}<a href="/medicamentos" class="btn btn-link">Limpiar</a>{{/if}}
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Medicamento</th>
+        <th class="text-end">Precio de venta</th>
+        <th class="text-end">Disponible</th>
+        <th>Próximo vencimiento</th>
+        <th>Estado</th>
+        {{#if (puede 'medicamentos:gestionar')}}<th class="text-end">Acciones</th>{{/if}}
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lista}}
+        <tr {{#if (eq estado 2)}}class="text-muted"{{/if}}>
+          <td>
+            <strong>{{nombre}}</strong> <span class="text-muted">{{presentacion}}</span>
+          </td>
+          <td class="text-end">Q {{precio}}</td>
+          <td class="text-end">
+            {{disponible}}
+            {{#if agotado}}<span class="badge text-bg-danger">Agotado</span>{{/if}}
+            {{#if poco}}<span class="badge text-bg-warning" title="Mínimo: {{existencia_minima}}">Bajo el mínimo</span>{{/if}}
+            {{#if hayVencido}}<div class="small text-danger">{{vencida}} vencida(s) por dar de baja</div>{{/if}}
+          </td>
+          <td>
+            {{#if proximo_vencimiento}}
+              {{proximo_vencimiento}}
+              {{#if porVencer}}<span class="badge text-bg-warning">Vence en {{dias_para_vencer}} día(s)</span>{{/if}}
+            {{else}}<span class="text-muted">—</span>{{/if}}
+          </td>
+          <td>{{#if (eq estado 1)}}<span class="badge text-bg-success">Activo</span>{{else}}<span class="badge text-bg-secondary">Desactivado</span>{{/if}}</td>
+          {{#if (puede 'medicamentos:gestionar')}}
+            <td class="text-end text-nowrap">
+              {{#if (eq estado 1)}}
+                <a href="/medicamentos/{{id_medicamento}}/ingreso" class="btn btn-sm btn-outline-success">+ Ingresar lote</a>
+              {{/if}}
+              <a href="/medicamentos/{{id_medicamento}}/editar" class="btn btn-sm btn-outline-primary">Lotes y edición</a>
+              <form action="/medicamentos/{{id_medicamento}}/estado" method="POST" class="d-inline">
+                <button class="btn btn-sm {{#if (eq estado 1)}}btn-outline-danger{{else}}btn-outline-success{{/if}}">
+                  {{#if (eq estado 1)}}Desactivar{{else}}Activar{{/if}}
+                </button>
+              </form>
+            </td>
+          {{/if}}
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-center text-muted py-4">Todavía no hay medicamentos en el catálogo.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<p class="text-muted small">
+  "Disponible" es lo que se puede despachar (sin contar lo vencido). Al despachar sale primero el lote que vence antes.
+</p>

@@ -97,6 +97,34 @@ exports.consultarReferencia = async (req, res) => {
   }
 };
 
+// PUT /api/referencias/:codigo/atendida
+// El asilo avisa que el especialista ya registró la visita. Es SEGURO repetirla (idempotente):
+// si ya estaba atendida, responde lo mismo. Solo una cita programada o reprogramada puede pasar a atendida.
+exports.marcarAtendida = async (req, res) => {
+  try {
+    const referencia = await referenciaModelo.buscarPorCodigo(req.params.codigo);
+
+    if (!referencia) {
+      return res.status(404).json({ mensaje: 'Referencia no encontrada' });
+    }
+
+    if (referencia.estado === 'Atendida') {
+      return res.json({ codigo: referencia.codigo, estado: 'Atendida' });
+    }
+
+    const cambio = await referenciaModelo.marcarAtendida(referencia.id_referencia);
+
+    if (cambio === 0) {
+      return res.status(409).json({ mensaje: `Una referencia en estado "${referencia.estado}" no puede pasar a Atendida` });
+    }
+
+    res.json({ codigo: referencia.codigo, estado: 'Atendida' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ mensaje: 'Error interno de la Fundación' });
+  }
+};
+
 // PUT /api/especialistas
 // El asilo manda la lista COMPLETA de sus médicos especialistas (los registra el administrador del asilo).
 // La Fundación los guarda para poder elegirlos al programar una cita. Quien falte en la lista se desactiva.

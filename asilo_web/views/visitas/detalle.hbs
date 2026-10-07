@@ -1,0 +1,148 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-1">Visita #{{visita.id_visita}}</h2>
+    <span class="badge {{visita.clase_estado}} fs-6">{{visita.estado}}</span>
+  </div>
+  {{#if esMia}}
+    <a href="/visitas/agenda" class="btn btn-outline-secondary">Volver a mi agenda</a>
+  {{else}}
+    <a href="/visitas" class="btn btn-outline-secondary">Volver a la lista</a>
+  {{/if}}
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Interno</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>{{visita.interno_nombre}}</strong></p>
+        <p class="mb-0">{{visita.interno_edad}} años</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Atención</div>
+      <div class="card-body">
+        <p class="mb-1">Fecha: <strong>{{visita.fecha_texto}}</strong></p>
+        <p class="mb-1">Especialista: <strong>{{visita.especialista_nombre}}</strong>
+          {{#if visita.especialidad}}<span class="text-muted">· {{visita.especialidad}}</span>{{/if}}</p>
+        <p class="mb-0 small text-muted">Solicitud #{{visita.id_solicitud}}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">Diagnóstico</div>
+  <div class="card-body">
+    <p class="mb-0" style="white-space: pre-line;">{{#if visita.diagnostico}}{{visita.diagnostico}}{{else}}<span class="text-muted">Sin diagnóstico registrado.</span>{{/if}}</p>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">Observaciones</div>
+  <div class="card-body">
+    <p class="mb-0" style="white-space: pre-line;">{{#if visita.observaciones}}{{visita.observaciones}}{{else}}<span class="text-muted">Sin observaciones.</span>{{/if}}</p>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Exámenes de laboratorio ordenados</div>
+      <ul class="list-group list-group-flush">
+        {{#each examenes}}
+          <li class="list-group-item {{#if (eq estado 'Anulado')}}text-muted{{/if}}">
+            <div class="d-flex justify-content-between align-items-center">
+              <span>
+                {{#if (eq estado 'Anulado')}}<s>{{nombre_examen}}</s>{{else}}{{nombre_examen}}{{/if}}
+                <span class="badge text-bg-light border">{{estado}}</span>
+                {{#if id_examen_origen}}<span class="badge text-bg-info">Repetición</span>{{/if}}
+              </span>
+              <span>
+                {{#if costo_real}}Q {{costo_real}} <span class="small text-muted">(real)</span>
+                {{else}}Q {{costo_estimado}} <span class="small text-muted">(aprox.)</span>{{/if}}
+              </span>
+            </div>
+            {{#if resultado}}
+              <div class="mt-1 small" style="white-space: pre-line;"><span class="text-muted">Resultado ({{fecha_resultado_texto}}):</span> {{resultado}}</div>
+            {{/if}}
+            {{#if motivo_anulacion}}
+              <div class="small text-danger">Motivo de la anulación: {{motivo_anulacion}}</div>
+            {{/if}}
+            {{#if (eq estado 'Con resultado')}}{{#if ../puedeAnular}}
+              <form class="row g-2 mt-1" action="/examenes/{{id_examen}}/anular" method="POST"
+                    onsubmit="return confirm('¿Anular este resultado? Se conserva como anulado y se pide el examen de nuevo.');">
+                <div class="col-12 col-md-8">
+                  <input type="text" class="form-control form-control-sm" name="motivo" minlength="10" maxlength="255" required
+                         placeholder="Motivo (ej. EL RESULTADO NO CORRESPONDE AL INTERNO)">
+                </div>
+                <div class="col-auto"><button class="btn btn-sm btn-outline-danger">Anular resultado</button></div>
+              </form>
+            {{/if}}{{/if}}
+          </li>
+        {{else}}
+          <li class="list-group-item text-muted">No se ordenaron exámenes.</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Medicamentos prescritos</div>
+      <ul class="list-group list-group-flush">
+        {{#each recetas}}
+          <li class="list-group-item">
+            <strong>{{medicamento}}</strong> · {{cantidad}} unidad(es) · {{tiempo_aplicacion}}
+            {{#if area_aplicacion}}<div class="small text-muted">Área: {{area_aplicacion}}</div>{{/if}}
+            <div class="small text-muted">Despachado: {{cantidad_despachada}} de {{cantidad}}</div>
+            {{#if sin_existencia}}
+              <div class="small text-danger fw-bold">Farmacia no tiene existencia de este medicamento: valora una sustitución.</div>
+            {{/if}}
+          </li>
+        {{else}}
+          <li class="list-group-item text-muted">No se prescribieron medicamentos.</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between">
+    <span>Costos (con descuento institucional de la Fundación)</span>
+    <span class="badge {{visita.clase_costo}}">{{visita.estado_costo}}</span>
+  </div>
+  <div class="card-body">
+    {{#if visita.hayCostos}}
+      <table class="table table-sm mb-0" style="max-width: 460px;">
+        <tr><td>Consulta</td><td class="text-end">Q {{visita.costo_consulta}}</td></tr>
+        <tr><td>Exámenes (real, o aproximado si el laboratorio aún no lo fija)</td><td class="text-end">Q {{visita.costo_examenes}}</td></tr>
+        <tr><td>Medicamentos</td><td class="text-end">Q {{visita.costo_medicamentos}} <span class="small text-muted">(se suma al despacharlos)</span></td></tr>
+        {{#if visita.calculado}}
+          <tr><td>Subtotal</td><td class="text-end">Q {{visita.subtotal}}</td></tr>
+          <tr><td>Descuento (20%)</td><td class="text-end">- Q {{visita.descuento}}</td></tr>
+          <tr class="fw-bold"><td>Total</td><td class="text-end">Q {{visita.total}}</td></tr>
+        {{/if}}
+      </table>
+      {{#unless visita.calculado}}
+        <p class="mt-2 mb-0 text-warning-emphasis">
+          El microservicio de costos no estaba disponible: el importe se calculará solo cuando vuelva a responder.
+        </p>
+      {{/unless}}
+    {{else}}
+      <p class="mb-0 text-muted">Esta visita no genera cargos.</p>
+    {{/if}}
+  </div>
+</div>
+
+{{#if (eq visita.estado 'Borrador')}}
+  {{#if esMia}}
+    <a href="/visitas/atender/{{visita.id_solicitud}}" class="btn btn-primary">Retomar el borrador</a>
+  {{/if}}
+{{/if}}

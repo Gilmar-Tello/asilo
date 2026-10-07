@@ -118,6 +118,15 @@ async function consultarReferencia(codigo) {
   return llamar('GET', `/api/referencias/${encodeURIComponent(codigo)}`);
 }
 
+// Avisa a la Fundación que el especialista ya atendió al interno (la referencia pasa a "Atendida").
+// Es seguro repetirla: si ya estaba atendida, la Fundación responde lo mismo.
+async function marcarAtendida(codigo) {
+  if (SIMULADO) {
+    return { codigo, estado: 'Atendida', simulado: true };
+  }
+  return llamar('PUT', `/api/referencias/${encodeURIComponent(codigo)}/atendida`);
+}
+
 // Catálogo de especialidades que atiende la Fundación
 async function listarEspecialidades() {
   if (SIMULADO) {
@@ -139,5 +148,5 @@ async function sincronizarEspecialistas(lista) {
 
 module.exports = {
   SIMULADO, FundacionNoDisponible,
-  publicarReferencia, consultarReferencia, listarEspecialidades, sincronizarEspecialistas
+  publicarReferencia, consultarReferencia, marcarAtendida, listarEspecialidades, sincronizarEspecialistas
 };

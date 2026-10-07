@@ -51,16 +51,38 @@
         </li>
       {{/if}}
 
+      {{#if (puede 'visitas:ver' 'visitas:atender' 'examenes:ver' 'examenes:registrar_resultado')}}
+        <li class="nav-item mt-3">
+          <span class="text-uppercase small fw-bold text-secondary px-3">Atención médica</span>
+        </li>
+        {{#if (puede 'visitas:atender')}}
+          <li class="nav-item"><a class="nav-link" href="/visitas/agenda">Mi agenda de visitas</a></li>
+        {{/if}}
+        {{#if (puede 'visitas:ver')}}
+          <li class="nav-item"><a class="nav-link" href="/visitas">Visitas médicas</a></li>
+        {{/if}}
+        {{#if (puede 'examenes:ver' 'examenes:registrar_resultado')}}
+          <li class="nav-item"><a class="nav-link" href="/examenes">Exámenes de laboratorio</a></li>
+        {{/if}}
+      {{/if}}
+
+      {{#if (puede 'medicamentos:ver' 'medicamentos:gestionar' 'medicamentos:despachar')}}
+        <li class="nav-item mt-3">
+          <span class="text-uppercase small fw-bold text-secondary px-3">Farmacia</span>
+        </li>
+        {{#if (puede 'medicamentos:despachar')}}
+          <li class="nav-item"><a class="nav-link" href="/farmacia">Despachar (POS)</a></li>
+        {{/if}}
+        {{#if (puede 'medicamentos:ver' 'medicamentos:gestionar')}}
+          <li class="nav-item"><a class="nav-link" href="/medicamentos">Medicamentos e inventario</a></li>
+        {{/if}}
+        <li class="nav-item"><a class="nav-link" href="/farmacia/despachos">Despachos</a></li>
+      {{/if}}
+
       {{!-- Estos módulos todavía no existen ni tienen permisos: por ahora solo los ve el
             administrador. Cuando se construya cada uno, se le crean sus permisos y se pasa
             arriba, con su propio if (puede ...). --}}
       {{#if rolEsSistema}}
-        <li class="nav-item mt-3">
-          <span class="text-uppercase small fw-bold text-secondary px-3">Atención médica</span>
-        </li>
-        <li class="nav-item"><a class="nav-link" href="#">Visitas médicas</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Exámenes de laboratorio</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Medicamentos</a></li>
 
         <li class="nav-item mt-3">
           <span class="text-uppercase small fw-bold text-secondary px-3">Finanzas</span>

@@ -1,0 +1,131 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Despacho · {{interno.nombre_completo}}</h2>
+    <div class="text-muted">DPI {{interno.dpi}} · {{interno.edad}} años</div>
+  </div>
+  <a href="/farmacia" class="btn btn-outline-secondary">Volver a la cola</a>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+{{#if catalogoVacio}}
+  <div class="alert alert-warning">
+    El catálogo de medicamentos está vacío. Agrega medicamentos con su precio y existencia en
+    <a href="/medicamentos">Medicamentos e inventario</a> antes de despachar.
+  </div>
+{{/if}}
+
+<form action="/farmacia/interno/{{interno.id_interno}}" method="POST" id="form-pos">
+  <div class="table-responsive">
+    <table class="table align-middle" id="tabla-pos">
+      <thead class="table-light">
+        <tr>
+          <th style="min-width: 220px;">Indicado</th>
+          <th style="min-width: 260px;">Se entrega (catálogo)</th>
+          <th style="width: 110px;">Cantidad</th>
+          <th style="width: 130px;"></th>
+          <th class="text-end" style="width: 120px;">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="table-secondary"><td colspan="5" class="small fw-bold text-uppercase">Recetas de las visitas médicas</td></tr>
+        {{#each filas}}{{#if (eq tipo 'receta')}}
+          <tr class="fila-pos" data-maximo="{{maximo}}">
+            <td>
+              <strong>{{titulo}}</strong>
+              {{#if yaSinExistencia}}<span class="badge text-bg-danger">Marcado sin existencia</span>{{/if}}
+              <div class="small text-muted">{{detalle}}</div>
+              <div class="small">Despachado: {{despachado}} · <strong>Pendiente: {{maximo}}</strong></div>
+              <input type="hidden" name="lineas[{{indice}}][tipo]" value="receta">
+              <input type="hidden" name="lineas[{{indice}}][id_origen]" value="{{id_origen}}">
+            </td>
+            <td>
+              <select name="lineas[{{indice}}][id_medicamento]" class="form-select form-select-sm med-select">
+                <option value="" data-precio="0" data-existencia="0">— Elige del catálogo —</option>
+                {{#each opciones}}
+                  <option value="{{id_medicamento}}" data-precio="{{precio}}" data-existencia="{{existencia}}" {{#if elegido}}selected{{/if}}>
+                    {{nombre}} {{presentacion}} · Q {{precio}} · hay {{existencia}}
+                  </option>
+                {{/each}}
+              </select>
+              <div class="small text-danger aviso-existencia d-none">No hay existencia suficiente: despacha solo lo que hay.</div>
+            </td>
+            <td>
+              <input type="number" name="lineas[{{indice}}][cantidad]" class="form-control form-control-sm cantidad"
+                     min="0" max="{{maximo}}" step="1" value="{{cantidad}}">
+            </td>
+            <td>
+              <div class="form-check">
+                <input class="form-check-input sin-existencia" type="checkbox" value="1" id="sin{{indice}}"
+                       name="lineas[{{indice}}][sin_existencia]" {{#if marcadoSinExistencia}}checked{{/if}}>
+                <label class="form-check-label small" for="sin{{indice}}">Sin existencia</label>
+              </div>
+            </td>
+            <td class="text-end subtotal">Q 0.00</td>
+          </tr>
+        {{/if}}{{/each}}
+        {{#unless hayRecetas}}
+          <tr><td colspan="5" class="text-muted small">Este interno no tiene recetas pendientes de despacho.</td></tr>
+        {{/unless}}
+
+        <tr class="table-secondary"><td colspan="5" class="small fw-bold text-uppercase">Medicamentos de cajón (indicación permanente)</td></tr>
+        {{#each filas}}{{#if (eq tipo 'cajon')}}
+          <tr class="fila-pos" data-maximo="{{maximo}}">
+            <td>
+              <strong>{{titulo}}</strong> <span class="badge text-bg-info">Cajón</span>
+              <div class="small text-muted">{{detalle}}</div>
+              <input type="hidden" name="lineas[{{indice}}][tipo]" value="cajon">
+              <input type="hidden" name="lineas[{{indice}}][id_origen]" value="{{id_origen}}">
+            </td>
+            <td>
+              <select name="lineas[{{indice}}][id_medicamento]" class="form-select form-select-sm med-select">
+                <option value="" data-precio="0" data-existencia="0">— Elige del catálogo —</option>
+                {{#each opciones}}
+                  <option value="{{id_medicamento}}" data-precio="{{precio}}" data-existencia="{{existencia}}" {{#if elegido}}selected{{/if}}>
+                    {{nombre}} {{presentacion}} · Q {{precio}} · hay {{existencia}}
+                  </option>
+                {{/each}}
+              </select>
+              <div class="small text-danger aviso-existencia d-none">No hay existencia suficiente.</div>
+            </td>
+            <td>
+              <input type="number" name="lineas[{{indice}}][cantidad]" class="form-control form-control-sm cantidad"
+                     min="0" max="{{maximo}}" step="1" value="{{cantidad}}">
+            </td>
+            <td></td>
+            <td class="text-end subtotal">Q 0.00</td>
+          </tr>
+        {{/if}}{{/each}}
+      </tbody>
+      <tfoot>
+        <tr class="fs-5">
+          <td colspan="4" class="text-end fw-bold">Total del despacho</td>
+          <td class="text-end fw-bold" id="total-pos">Q 0.00</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <p class="small text-muted">
+    Las recetas se cobran en la cuenta de su visita médica, donde el microservicio aplica el 20% de descuento de la Fundación.
+    Nunca se puede entregar más de lo recetado ni más de lo que hay en existencia; si hay menos, se despacha lo que hay y el resto queda pendiente.
+  </p>
+
+  <button type="submit" class="btn btn-success btn-lg">Confirmar despacho</button>
+</form>
+
+{{#if despachadas}}
+  <h5 class="mt-5">Recetas ya despachadas</h5>
+  <ul class="list-group mb-4">
+    {{#each despachadas}}
+      <li class="list-group-item small">
+        <strong>{{medicamento}}</strong> ({{cantidad}}) · visita {{fecha_visita_texto}} ·
+        despachada {{#if ultimo_despacho_texto}}el {{ultimo_despacho_texto}}{{/if}} {{#if despachado_por}}por {{despachado_por}}{{/if}}
+      </li>
+    {{/each}}
+  </ul>
+{{/if}}
+
+<script src="/js/farmacia-pos.js"></script>

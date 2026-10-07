@@ -1,0 +1,61 @@
+<style>
+  @media print {
+    .no-imprimir, .menu-lateral, nav, header { display: none !important; }
+  }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-imprimir">
+  <h2 class="mb-0">Comprobante de despacho</h2>
+  <div>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">Imprimir</button>
+    <a href="/farmacia/interno/{{despacho.id_interno}}" class="btn btn-outline-primary">Volver al interno</a>
+    <a href="/farmacia" class="btn btn-primary">Siguiente interno</a>
+  </div>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}} no-imprimir">{{mensaje}}</div>
+{{/if}}
+
+<div class="card" style="max-width: 760px;">
+  <div class="card-body">
+    <div class="d-flex justify-content-between">
+      <div>
+        <h5 class="mb-0">Asilo de Ancianos Cabeza de Algodón · Farmacia</h5>
+        <div class="text-muted small">Despacho #{{despacho.id_despacho}} · {{despacho.fecha_texto}}</div>
+      </div>
+      <div class="text-end small">
+        <div>Interno: <strong>{{despacho.interno_nombre}}</strong></div>
+        <div>DPI {{despacho.interno_dpi}}</div>
+        <div>Despachó: {{despacho.farmaceutico_nombre}}</div>
+      </div>
+    </div>
+    <hr>
+    <table class="table table-sm align-middle mb-0">
+      <thead>
+        <tr><th>Medicamento</th><th>Origen</th><th class="text-end">Cant.</th><th class="text-end">P. unitario</th><th class="text-end">Subtotal</th></tr>
+      </thead>
+      <tbody>
+        {{#each despacho.lineas}}
+          <tr>
+            <td>{{nombre}} {{presentacion}}</td>
+            <td class="small">
+              {{#if id_receta}}Receta de la visita #{{id_visita}}{{#if recetado}} ({{recetado}}){{/if}}
+              {{else}}Cajón · {{nombre_padecimiento}}{{/if}}
+            </td>
+            <td class="text-end">{{cantidad}}</td>
+            <td class="text-end">Q {{precio_unitario}}</td>
+            <td class="text-end">Q {{subtotal}}</td>
+          </tr>
+        {{/each}}
+      </tbody>
+      <tfoot>
+        <tr class="fw-bold"><td colspan="4" class="text-end">Total (antes del descuento)</td><td class="text-end">Q {{despacho.total}}</td></tr>
+      </tfoot>
+    </table>
+    <p class="small text-muted mt-2 mb-0">
+      Lo despachado por receta se cargó a la cuenta de su visita médica, donde se aplica el 20% de descuento de la Fundación.
+      Lo de cajón queda registrado para Facturación.
+    </p>
+  </div>
+</div>

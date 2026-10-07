@@ -1,0 +1,66 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Exámenes de laboratorio</h2>
+    <div class="text-muted">Órdenes de examen de las visitas médicas ya registradas</div>
+  </div>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<form class="row g-2 mb-3" action="/examenes" method="GET">
+  <div class="col-12 col-md-4">
+    <input type="text" class="form-control" name="q" value="{{busqueda}}"
+           placeholder="Buscar por interno o examen" maxlength="100">
+  </div>
+  <div class="col-12 col-md-3">
+    <select name="estado" class="form-select">
+      <option value="todos" {{#if (eq estado 'todos')}}selected{{/if}}>Todos los estados</option>
+      {{#each estados}}
+        <option value="{{this}}" {{#if (eq this ../estado)}}selected{{/if}}>{{this}}</option>
+      {{/each}}
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Visita</th>
+        <th>Interno</th>
+        <th>Examen</th>
+        <th>Médico que lo ordenó</th>
+        <th>Estado</th>
+        <th class="text-end">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each lista}}
+        <tr {{#if (eq estado 'Anulado')}}class="text-muted"{{/if}}>
+          <td>{{fecha_visita_texto}}</td>
+          <td>{{interno_nombre}} <span class="small text-muted">· {{interno_edad}} años</span></td>
+          <td>
+            {{#if (eq estado 'Anulado')}}<s>{{nombre_examen}}</s>{{else}}<strong>{{nombre_examen}}</strong>{{/if}}
+            {{#if id_examen_origen}}<span class="badge text-bg-info">Repetición</span>{{/if}}
+          </td>
+          <td>{{especialista_nombre}}</td>
+          <td><span class="badge {{clase_estado}}">{{estado}}</span></td>
+          <td class="text-end">
+            <a href="/examenes/{{id_examen}}" class="btn btn-sm {{#if (eq estado 'Ordenado')}}btn-primary{{else}}btn-outline-primary{{/if}}">
+              {{#if (eq estado 'Ordenado')}}Cargar resultado{{else}}Ver{{/if}}
+            </a>
+          </td>
+        </tr>
+      {{else}}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">No hay órdenes de examen con ese filtro.</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

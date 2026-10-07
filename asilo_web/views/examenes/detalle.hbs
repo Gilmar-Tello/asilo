@@ -1,0 +1,83 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-1">{{examen.nombre_examen}}</h2>
+    <span class="badge {{examen.clase_estado}} fs-6">{{examen.estado}}</span>
+    {{#if examen.id_examen_origen}}<span class="badge text-bg-info fs-6">Repetición de un resultado anulado</span>{{/if}}
+  </div>
+  <a href="/examenes" class="btn btn-outline-secondary">Volver a la lista</a>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Interno</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>{{examen.interno_nombre}}</strong></p>
+        <p class="mb-0">{{examen.interno_edad}} años</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Orden</div>
+      <div class="card-body">
+        <p class="mb-1">Visita: <strong>{{examen.fecha_visita_texto}}</strong></p>
+        <p class="mb-1">Ordenado por: <strong>{{examen.especialista_nombre}}</strong></p>
+        <p class="mb-0">Precio aproximado (del especialista): <strong>Q {{examen.costo_estimado}}</strong>
+          {{#if examen.costo_real}}· Precio real: <strong>Q {{examen.costo_real}}</strong>{{/if}}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{#if puedeRegistrar}}
+  <div class="card mb-3">
+    <div class="card-header">Resultado del examen</div>
+    <div class="card-body">
+      <form action="/examenes/{{examen.id_examen}}/resultado" method="POST"
+            onsubmit="return confirm('¿Guardar el resultado? Una vez guardado no se puede modificar: si hay un error, el especialista lo anula y se pide de nuevo.');">
+        <div class="mb-3">
+          <label for="resultado" class="form-label">Resultado obtenido *</label>
+          <textarea class="form-control" id="resultado" name="resultado" rows="6" required minlength="3" maxlength="5000"
+                    placeholder="Escribe los valores y datos del reporte clínico"></textarea>
+        </div>
+        {{#if examen.id_examen_origen}}
+          <p class="text-muted small">Es la repetición de un resultado anulado: no se vuelve a cobrar (precio real Q 0.00).</p>
+        {{else}}
+          <div class="mb-3 col-12 col-md-4">
+            <label for="costo_real" class="form-label">Precio real del examen (Q) *</label>
+            <input type="number" class="form-control" id="costo_real" name="costo_real" required
+                   min="0" max="99999.99" step="0.01" placeholder="0.00">
+            <div class="form-text">El especialista calculó aprox. Q {{examen.costo_estimado}}. Escribe lo que realmente cuesta.</div>
+          </div>
+        {{/if}}
+        <button type="submit" class="btn btn-success">Guardar resultado</button>
+      </form>
+    </div>
+  </div>
+{{else}}
+  {{#if examen.resultado}}
+    <div class="card mb-3">
+      <div class="card-header">Resultado</div>
+      <div class="card-body">
+        <p class="mb-2" style="white-space: pre-line;">{{examen.resultado}}</p>
+        <p class="mb-0 small text-muted">
+          Cargado el {{examen.fecha_resultado_texto}}{{#if examen.laboratorista_nombre}} por {{examen.laboratorista_nombre}}{{/if}}
+        </p>
+      </div>
+    </div>
+  {{/if}}
+  {{#if examen.motivo_anulacion}}
+    <div class="alert alert-danger">
+      <strong>Resultado anulado.</strong> Motivo: {{examen.motivo_anulacion}}.
+      Se conserva arriba para que quede la trazabilidad, y se generó una nueva orden para repetir el examen.
+    </div>
+  {{/if}}
+  {{#unless examen.resultado}}{{#unless examen.motivo_anulacion}}
+    <p class="text-muted">Esta orden todavía no tiene resultado.</p>
+  {{/unless}}{{/unless}}
+{{/if}}

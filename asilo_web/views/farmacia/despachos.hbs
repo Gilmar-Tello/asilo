@@ -1,0 +1,41 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Despachos de farmacia</h2>
+    <div class="text-muted">Historial de lo entregado</div>
+  </div>
+  {{#if (puede 'medicamentos:despachar')}}<a href="/farmacia" class="btn btn-primary">Despachar</a>{{/if}}
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<form class="row g-2 mb-3" action="/farmacia/despachos" method="GET">
+  <div class="col-12 col-md-6">
+    <input type="text" class="form-control" name="q" value="{{busqueda}}" placeholder="Buscar por nombre del interno" maxlength="100">
+  </div>
+  <div class="col-auto"><button type="submit" class="btn btn-outline-primary">Buscar</button></div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr><th>#</th><th>Fecha</th><th>Interno</th><th>Despachó</th><th class="text-end">Líneas</th><th class="text-end">Total</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{#each lista}}
+        <tr>
+          <td>{{id_despacho}}</td>
+          <td>{{fecha_texto}}</td>
+          <td>{{interno_nombre}}</td>
+          <td>{{farmaceutico_nombre}}</td>
+          <td class="text-end">{{lineas}}</td>
+          <td class="text-end">Q {{total}}</td>
+          <td class="text-end"><a href="/farmacia/despachos/{{id_despacho}}" class="btn btn-sm btn-outline-primary">Comprobante</a></td>
+        </tr>
+      {{else}}
+        <tr><td colspan="7" class="text-center text-muted py-4">Todavía no hay despachos.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,200 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Registrar visita médica</h2>
+    <div class="text-muted">
+      {{cita.interno_nombre}} · {{cita.interno_edad}} años ·
+      {{#if (eq cita.interno_sexo 'M')}}Masculino{{else}}Femenino{{/if}}
+      · Cita: {{cita.fecha_cita_texto}}
+    </div>
+  </div>
+  <a href="/visitas/agenda" class="btn btn-outline-secondary">Volver a mi agenda</a>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+{{#if borrador}}
+  <div class="alert alert-warning py-2">Estás retomando un borrador guardado. Nada es definitivo hasta que confirmes la visita.</div>
+{{/if}}
+
+<div class="row g-3 mb-3">
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Motivo de la referencia (evaluación del médico general)</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>Especialidad requerida:</strong> {{cita.especialidad_requerida}}</p>
+        <p class="mb-0" style="white-space: pre-line;">{{cita.evaluacion_inicial}}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Padecimientos registrados del interno</div>
+      <ul class="list-group list-group-flush">
+        {{#each padecimientos}}
+          <li class="list-group-item {{#if anulada}}text-muted{{/if}}">
+            {{#if anulada}}<s>{{nombre_padecimiento}}</s> <span class="badge text-bg-secondary">Anulado</span>
+            {{else}}<strong>{{nombre_padecimiento}}</strong>{{/if}}
+            {{#if medicamento_cajon}}<span class="small"> · {{medicamento_cajon}} {{dosis}}</span>{{/if}}
+            {{#if descripcion}}<div class="small text-muted">{{descripcion}}</div>{{/if}}
+          </li>
+        {{else}}
+          <li class="list-group-item text-muted">Sin padecimientos registrados.</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">Historial clínico (visitas anteriores)</div>
+  {{#if historial}}
+    <div class="list-group list-group-flush">
+      {{#each historial}}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between">
+            <strong>{{fecha_texto}} · {{especialista_nombre}}{{#if especialidad}} ({{especialidad}}){{/if}}</strong>
+            <a href="/visitas/{{id_visita}}" class="small">Ver completa</a>
+          </div>
+          <div style="white-space: pre-line;"><span class="text-muted">Diagnóstico:</span> {{diagnostico}}</div>
+          {{#if examenes}}
+            <div class="small text-muted">Exámenes:
+              {{#each examenes}}{{nombre_examen}} ({{estado}}){{#unless @last}}, {{/unless}}{{/each}}
+            </div>
+          {{/if}}
+          {{#if recetas}}
+            <div class="small text-muted">Recetas:
+              {{#each recetas}}{{medicamento}} ({{cantidad}}){{#unless @last}}, {{/unless}}{{/each}}
+            </div>
+          {{/if}}
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="card-body text-muted">El interno no posee historial clínico registrado.</div>
+  {{/if}}
+</div>
+
+<form action="/visitas/atender/{{cita.id_solicitud}}" method="POST">
+
+  <div class="card mb-3">
+    <div class="card-header">Evaluación de hoy</div>
+    <div class="card-body">
+      <div class="mb-3">
+        <label for="diagnostico" class="form-label">Diagnóstico * <span class="small text-muted">(obligatorio para confirmar)</span></label>
+        <textarea class="form-control" id="diagnostico" name="diagnostico" rows="3" maxlength="5000">{{visitaForm.diagnostico}}</textarea>
+      </div>
+      <div class="mb-3">
+        <label for="observaciones" class="form-label">Observaciones médicas</label>
+        <textarea class="form-control" id="observaciones" name="observaciones" rows="3" maxlength="5000">{{visitaForm.observaciones}}</textarea>
+      </div>
+      <div class="col-12 col-md-4">
+        <label for="costo_consulta" class="form-label">Costo de la consulta (Q)</label>
+        <input type="number" class="form-control" id="costo_consulta" name="costo_consulta"
+               min="0" max="99999.99" step="0.01" value="{{visitaForm.costo_consulta_texto}}" placeholder="0.00">
+        <div class="form-text">La Fundación aplica 20% de descuento sobre el total.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Exámenes de laboratorio (opcional) <span class="small text-muted">· el precio es aproximado; el laboratorio fija el real</span></span>
+      <button type="button" class="btn btn-sm btn-outline-primary" data-agregar="examenes" data-plantilla="plantilla-examen">+ Agregar examen</button>
+    </div>
+    <div class="card-body" id="examenes">
+      {{#each visitaForm.examenes}}
+        <div class="row g-2 mb-2 fila-dinamica">
+          <div class="col-12 col-md-7">
+            <input type="text" class="form-control" name="examen_nombre[]" maxlength="100" placeholder="Examen (ej. HEMOGRAMA)" value="{{nombre}}">
+          </div>
+          <div class="col-8 col-md-3">
+            <input type="number" class="form-control" name="examen_costo[]" min="0" max="99999.99" step="0.01" placeholder="Costo estimado" value="{{costoTexto}}">
+          </div>
+          <div class="col-4 col-md-2"><button type="button" class="btn btn-outline-danger w-100 quitar-fila">Quitar</button></div>
+        </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Medicamentos prescritos (opcional)</span>
+      <button type="button" class="btn btn-sm btn-outline-primary" data-agregar="recetas" data-plantilla="plantilla-receta">+ Agregar medicamento</button>
+    </div>
+    <div class="card-body" id="recetas">
+      {{#each visitaForm.recetas}}
+        <div class="row g-2 mb-2 fila-dinamica">
+          <div class="col-12 col-md-3">
+            <input type="text" class="form-control" name="receta_medicamento[]" maxlength="100" placeholder="Medicamento" list="catalogo-medicamentos" value="{{medicamento}}">
+          </div>
+          <div class="col-12 col-md-3">
+            <input type="text" class="form-control" name="receta_area[]" maxlength="60" placeholder="Área de aplicación" value="{{area}}">
+          </div>
+          <div class="col-4 col-md-2">
+            <input type="number" class="form-control" name="receta_cantidad[]" min="1" max="9999" step="1" placeholder="Cantidad" value="{{cantidadTexto}}">
+          </div>
+          <div class="col-8 col-md-2">
+            <input type="text" class="form-control" name="receta_tiempo[]" maxlength="60" placeholder="Tiempo (ej. 7 DÍAS)" value="{{tiempo}}">
+          </div>
+          <div class="col-12 col-md-2"><button type="button" class="btn btn-outline-danger w-100 quitar-fila">Quitar</button></div>
+        </div>
+      {{/each}}
+    </div>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2">
+    <button type="submit" name="accion" value="confirmar" class="btn btn-success"
+            onclick="return confirm('¿Confirmar la visita? Después ya no se podrá modificar.');">Confirmar visita</button>
+    <button type="submit" name="accion" value="borrador" class="btn btn-outline-primary">Guardar borrador</button>
+    <button type="submit" name="accion" value="no_asistio" class="btn btn-outline-danger" formnovalidate
+            onclick="return confirm('¿Registrar que el interno NO asistió? No se generará ningún cargo.');">El interno no asistió</button>
+  </div>
+  <p class="text-muted small mt-2">
+    Un borrador te permite retomar la visita sin volver a escribir. Una visita confirmada pasa al historial clínico
+    y no se puede modificar ni borrar.
+  </p>
+
+</form>
+
+{{!-- Molde de las filas nuevas: el botón "+ Agregar" copia esto --}}
+<template id="plantilla-examen">
+  <div class="row g-2 mb-2 fila-dinamica">
+    <div class="col-12 col-md-7">
+      <input type="text" class="form-control" name="examen_nombre[]" maxlength="100" placeholder="Examen (ej. HEMOGRAMA)">
+    </div>
+    <div class="col-8 col-md-3">
+      <input type="number" class="form-control" name="examen_costo[]" min="0" max="99999.99" step="0.01" placeholder="Costo estimado">
+    </div>
+    <div class="col-4 col-md-2"><button type="button" class="btn btn-outline-danger w-100 quitar-fila">Quitar</button></div>
+  </div>
+</template>
+
+<template id="plantilla-receta">
+  <div class="row g-2 mb-2 fila-dinamica">
+    <div class="col-12 col-md-3">
+      <input type="text" class="form-control" name="receta_medicamento[]" maxlength="100" placeholder="Medicamento" list="catalogo-medicamentos">
+    </div>
+    <div class="col-12 col-md-3">
+      <input type="text" class="form-control" name="receta_area[]" maxlength="60" placeholder="Área de aplicación">
+    </div>
+    <div class="col-4 col-md-2">
+      <input type="number" class="form-control" name="receta_cantidad[]" min="1" max="9999" step="1" placeholder="Cantidad">
+    </div>
+    <div class="col-8 col-md-2">
+      <input type="text" class="form-control" name="receta_tiempo[]" maxlength="60" placeholder="Tiempo (ej. 7 DÍAS)">
+    </div>
+    <div class="col-12 col-md-2"><button type="button" class="btn btn-outline-danger w-100 quitar-fila">Quitar</button></div>
+  </div>
+</template>
+
+{{!-- Sugerencias al recetar: los medicamentos del catálogo de farmacia (se puede escribir otro) --}}
+<datalist id="catalogo-medicamentos">
+  {{#each catalogo}}<option value="{{nombre}}">{{presentacion}}</option>{{/each}}
+</datalist>
+
+<script src="/js/visita-formulario.js"></script>

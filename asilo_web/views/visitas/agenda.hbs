@@ -1,0 +1,54 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Mi agenda de visitas</h2>
+    <div class="text-muted">Citas programadas por la Fundación a tu nombre</div>
+  </div>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Fecha y hora</th>
+        <th>Interno</th>
+        <th>Edad</th>
+        <th>Especialidad</th>
+        <th>Estado de la cita</th>
+        <th class="text-end">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each citas}}
+        <tr>
+          <td><strong>{{fecha_cita_texto}}</strong></td>
+          <td>{{interno_nombre}}</td>
+          <td>{{interno_edad}} años</td>
+          <td>{{especialidad_requerida}}</td>
+          <td>
+            <span class="badge text-bg-success">{{estado}}</span>
+            {{#if id_borrador}}<span class="badge text-bg-warning">Borrador guardado</span>{{/if}}
+          </td>
+          <td class="text-end">
+            <a href="/visitas/atender/{{id_solicitud}}" class="btn btn-sm btn-primary">
+              {{#if id_borrador}}Retomar visita{{else}}Atender{{/if}}
+            </a>
+          </td>
+        </tr>
+      {{else}}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-4">
+            No tienes citas programadas. Cuando la Fundación te asigne una cita aparecerá aquí.
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<p class="text-muted small">
+  Solo puedes registrar la visita de una cita programada a tu nombre. Al confirmarla, la solicitud queda como "Atendida".
+</p>

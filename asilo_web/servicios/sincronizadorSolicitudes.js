@@ -89,10 +89,41 @@ async function consultar(idSolicitud) {
     estado: respuesta.estado,
     fecha_cita: fecha,
     especialista_nombre: respuesta.especialista ? String(respuesta.especialista.nombre || '').slice(0, 100) || null : null,
+    // id_externo = el id del especialista en el asilo: así sabemos de QUIÉN es la cita (agenda de visitas)
+    id_especialista: respuesta.especialista && Number.parseInt(respuesta.especialista.id_externo, 10) > 0
+      ? Number.parseInt(respuesta.especialista.id_externo, 10) : null,
     motivo_rechazo: respuesta.motivo_rechazo ? String(respuesta.motivo_rechazo).slice(0, 255) : null,
     // Si cambió la fecha o ya no está agendada, el enfermero asignado deja de valer
     desasignar: cambioDeFecha || !sigueAgendada
   });
+}
+
+// Avisa a la Fundación que la solicitud ya fue atendida (el especialista registró la visita).
+// Si la Fundación no responde, lanza el error: queda "sin notificar" y se reintenta sola.
+// Si la Fundación la rechaza por una razón que no se arregla reintentando (404 o 409), se anota y
+// se da por cerrada: insistir cada 5 minutos no serviría de nada.
+async function notificarAtendida(idSolicitud) {
+  const solicitud = await solicitudModelo.buscarPorId(idSolicitud);
+
+  if (!solicitud || !solicitud.codigo_fundacion || solicitud.estado !== 'Atendida') {
+    return;
+  }
+
+  try {
+    await fundacion.marcarAtendida(solicitud.codigo_fundacion);
+  } catch (error) {
+    // 404 solo cuenta si es "esa referencia no existe" (y no "esa ruta no existe", que pasaría
+    // si la Fundación todavía no tiene esta versión): en ese caso sí hay que reintentar después
+    const sinRemedio = error.estadoHttp === 409
+      || (error.estadoHttp === 404 && error.message === 'Referencia no encontrada');
+
+    if (error.noDisponible || !sinRemedio) {
+      throw error;
+    }
+    console.error(`Solicitud ${idSolicitud}: la Fundación no pudo marcarla como atendida (${error.message})`);
+  }
+
+  await solicitudModelo.marcarAtendidaNotificada(idSolicitud);
 }
 
 // Se ejecuta cada pocos minutos (ver app.js): reenvía lo que no se pudo enviar y
@@ -102,6 +133,16 @@ async function sincronizarPendientes() {
   sincronizando = true;
 
   try {
+    // Primero: las atendidas que la Fundación todavía no sabe
+    for (const atendida of await solicitudModelo.listarAtendidasSinNotificar()) {
+      try {
+        await notificarAtendida(atendida.id_solicitud);
+      } catch (error) {
+        console.error(`Solicitud ${atendida.id_solicitud}: no se pudo avisar la atención (${error.message})`);
+        if (error.noDisponible) break;
+      }
+    }
+
     const pendientes = await solicitudModelo.listarParaSincronizar();
 
     for (const pendiente of pendientes) {
@@ -125,4 +166,4 @@ async function sincronizarPendientes() {
   }
 }
 
-module.exports = { publicar, consultar, sincronizarPendientes };
+module.exports = { publicar, consultar, notificarAtendida, sincronizarPendientes };

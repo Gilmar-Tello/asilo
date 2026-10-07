@@ -74,6 +74,18 @@ app.use('/padecimientos', psicopatologiaRutas);
 const solicitudRutas = require('./rutas/solicitudRutas');
 app.use('/solicitudes', solicitudRutas);
 
+const visitaRutas = require('./rutas/visitaRutas');
+app.use('/visitas', visitaRutas);
+
+const examenRutas = require('./rutas/examenRutas');
+app.use('/examenes', examenRutas);
+
+const medicamentoRutas = require('./rutas/medicamentoRutas');
+app.use('/medicamentos', medicamentoRutas);
+
+const farmaciaRutas = require('./rutas/farmaciaRutas');
+app.use('/farmacia', farmaciaRutas);
+
 const authRutas = require('./rutas/authRutas');
 app.use('/', authRutas);
 
@@ -92,4 +104,10 @@ app.listen(PUERTO, () => {
     const especialistasFundacion = require('./servicios/especialistasFundacion');
     especialistasFundacion.sincronizar();
     setInterval(especialistasFundacion.sincronizar, 5 * 60 * 1000);
+
+    // Visitas cuyo costo quedó "pendiente de cálculo" porque el microservicio de costos (puerto 3000)
+    // no respondía: se reintentan al arrancar y cada 5 minutos
+    const calculadorCostos = require('./servicios/calculadorCostos');
+    calculadorCostos.reprocesarPendientes();
+    setInterval(calculadorCostos.reprocesarPendientes, 5 * 60 * 1000);
 });

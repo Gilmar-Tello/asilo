@@ -1,0 +1,41 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Farmacia · Despachar</h2>
+    <div class="text-muted">{{#if busqueda}}Resultado de la búsqueda{{else}}Internos con recetas pendientes de despacho{{/if}}</div>
+  </div>
+  <a href="/farmacia/despachos" class="btn btn-outline-secondary">Ver despachos</a>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+<form class="row g-2 mb-3" action="/farmacia" method="GET">
+  <div class="col-12 col-md-6">
+    <input type="text" class="form-control" name="q" value="{{busqueda}}" autofocus
+           placeholder="Buscar interno por nombre o DPI (también para medicamento de cajón)" maxlength="100">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-primary">Buscar</button>
+    {{#if busqueda}}<a href="/farmacia" class="btn btn-link">Ver la cola</a>{{/if}}
+  </div>
+</form>
+
+<div class="list-group">
+  {{#each lista}}
+    <a href="/farmacia/interno/{{id_interno}}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+      <div>
+        <strong>{{nombre_completo}}</strong>
+        <div class="small text-muted">DPI {{dpi}} · {{edad}} años</div>
+      </div>
+      <div class="text-end">
+        {{#if recetas_pendientes}}<span class="badge text-bg-warning fs-6">{{recetas_pendientes}} receta(s) por despachar</span>{{/if}}
+        {{#if medicamentos_cajon}}<span class="badge text-bg-info">{{medicamentos_cajon}} de cajón</span>{{/if}}
+      </div>
+    </a>
+  {{else}}
+    <div class="list-group-item text-muted text-center py-4">
+      {{#if busqueda}}No se encontró ningún interno activo.{{else}}No hay recetas pendientes. Busca un interno para despachar su medicamento de cajón.{{/if}}
+    </div>
+  {{/each}}
+</div>
