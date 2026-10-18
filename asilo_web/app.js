@@ -74,6 +74,12 @@ app.use('/padecimientos', psicopatologiaRutas);
 const solicitudRutas = require('./rutas/solicitudRutas');
 app.use('/solicitudes', solicitudRutas);
 
+const buscarRutas = require('./rutas/buscarRutas');
+app.use('/buscar', buscarRutas);
+
+const consultaRutas = require('./rutas/consultaRutas');
+app.use('/consultas', consultaRutas);
+
 const visitaRutas = require('./rutas/visitaRutas');
 app.use('/visitas', visitaRutas);
 
@@ -85,6 +91,9 @@ app.use('/medicamentos', medicamentoRutas);
 
 const farmaciaRutas = require('./rutas/farmaciaRutas');
 app.use('/farmacia', farmaciaRutas);
+
+const finanzasRutas = require('./rutas/finanzasRutas');
+app.use('/finanzas', finanzasRutas);
 
 const authRutas = require('./rutas/authRutas');
 app.use('/', authRutas);

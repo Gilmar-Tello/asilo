@@ -1,0 +1,86 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Donaciones</h2>
+    <div class="text-muted">Ingresos de empresas, gobierno y personas particulares (RN15)</div>
+  </div>
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+{{#if (puede 'finanzas:registrar')}}
+  <div class="card mb-4">
+    <div class="card-header">Registrar donación</div>
+    <div class="card-body">
+      <form class="row g-2" action="/finanzas/donaciones" method="POST">
+        <div class="col-12 col-md-3">
+          <label class="form-label small">Procedencia *</label>
+          <select name="procedencia" class="form-select" required>
+            <option value="">Seleccione…</option>
+            {{#each procedencias}}<option value="{{this}}" {{#if (eq this ../donacionForm.procedencia)}}selected{{/if}}>{{this}}</option>{{/each}}
+          </select>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label small">Donante *</label>
+          <input type="text" name="donante" class="form-control" required minlength="3" maxlength="150" value="{{donacionForm.donante}}" placeholder="Empresa, institución o persona">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label small">Monto (Q) *</label>
+          <input type="number" name="monto" class="form-control" required min="0.01" step="0.01" value="{{donacionForm.monto}}">
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label small">Fecha *</label>
+          <input type="date" name="fecha" class="form-control" required max="{{hoy}}" value="{{donacionForm.fecha}}">
+        </div>
+        <div class="col-12 col-md-9">
+          <input type="text" name="descripcion" class="form-control" maxlength="255" value="{{donacionForm.descripcion}}" placeholder="Descripción (opcional): destino, en especie, etc.">
+        </div>
+        <div class="col-12 col-md-3"><button class="btn btn-success w-100">Registrar donación</button></div>
+      </form>
+    </div>
+  </div>
+{{/if}}
+
+<form class="row g-2 mb-3 align-items-end" action="/finanzas/donaciones" method="GET">
+  <div class="col-auto"><label class="form-label small">Desde</label><input type="date" name="desde" class="form-control" value="{{desde}}"></div>
+  <div class="col-auto"><label class="form-label small">Hasta</label><input type="date" name="hasta" class="form-control" value="{{hasta}}"></div>
+  <div class="col-auto"><button class="btn btn-outline-primary">Filtrar</button></div>
+</form>
+
+<div class="row g-2 mb-3">
+  {{#each resumen}}
+    <div class="col-6 col-md-3"><div class="card"><div class="card-body py-2">
+      <div class="small text-muted">{{procedencia}} ({{cantidad}})</div><div class="fw-bold">Q {{total}}</div>
+    </div></div></div>
+  {{/each}}
+  <div class="col-6 col-md-3"><div class="card border-success"><div class="card-body py-2">
+    <div class="small text-muted">Total del período</div><div class="fw-bold text-success">Q {{total}}</div>
+  </div></div></div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead class="table-light"><tr><th>Fecha</th><th>Procedencia</th><th>Donante</th><th>Descripción</th><th class="text-end">Monto</th><th>Registró</th><th></th></tr></thead>
+    <tbody>
+      {{#each lista}}
+        <tr {{#if anulado}}class="text-muted"{{/if}}>
+          <td>{{fecha_texto}}</td><td>{{procedencia}}</td><td>{{donante}}</td><td class="small">{{descripcion}}</td>
+          <td class="text-end">{{#if anulado}}<s>Q {{monto}}</s> <span class="badge text-bg-secondary">Anulada</span>{{else}}Q {{monto}}{{/if}}</td>
+          <td class="small">{{usuario_nombre}}</td>
+          <td class="text-end">
+            {{#if anulado}}<span class="small">{{motivo_anulacion}}</span>
+            {{else}}{{#if (puede 'finanzas:anular')}}
+              <details><summary class="small text-danger">Anular</summary>
+                <form class="d-flex gap-1 mt-1" action="/finanzas/donaciones/{{id_donacion}}/anular" method="POST" onsubmit="return confirm('¿Anular esta donación?');">
+                  <input type="text" class="form-control form-control-sm" name="motivo" required minlength="10" maxlength="255" placeholder="Motivo">
+                  <button class="btn btn-sm btn-outline-danger">Anular</button>
+                </form>
+              </details>
+            {{/if}}{{/if}}
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="7" class="text-center text-muted py-3">No hay donaciones en este período.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

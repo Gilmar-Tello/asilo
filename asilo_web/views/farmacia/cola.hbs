@@ -12,7 +12,8 @@
 
 <form class="row g-2 mb-3" action="/farmacia" method="GET">
   <div class="col-12 col-md-6">
-    <input type="text" class="form-control" name="q" value="{{busqueda}}" autofocus
+    <input type="search" class="form-control" name="q" value="{{busqueda}}" autofocus autocomplete="off"
+           data-autocompletar="/buscar/internos" data-modo="ir" data-ir="/farmacia/interno/{id}"
            placeholder="Buscar interno por nombre o DPI (también para medicamento de cajón)" maxlength="100">
   </div>
   <div class="col-auto">

@@ -1,6 +1,7 @@
 const solicitudModelo = require('../modelos/solicitudModelo');
 const internoModelo = require('../modelos/internoModelo');
 const psicopatologiaModelo = require('../modelos/psicopatologiaModelo');
+const consultaModelo = require('../modelos/consultaModelo');
 const fundacion = require('../servicios/fundacionClient');
 const sincronizador = require('../servicios/sincronizadorSolicitudes');
 const { texto, mayus, mayusParrafo } = require('../utilidades/texto');
@@ -122,6 +123,31 @@ exports.listar = async (req, res) => {
   }
 };
 
+// La consulta del médico general de la que nace la derivación (si es válida: existe y no está anulada)
+async function consultaDeOrigen(valor) {
+  const id = parseInt(valor, 10);
+  if (Number.isNaN(id)) return null;
+  const consulta = await consultaModelo.buscarPorId(id);
+  return consulta && consulta.anulada === 0 ? consulta : null;
+}
+
+// Arma la evaluación inicial con lo que el médico escribió en la consulta
+function evaluacionDesdeConsulta(c) {
+  const signos = [
+    c.temperatura ? `TEMPERATURA ${c.temperatura} °C` : '',
+    c.presion ? `PRESIÓN ${c.presion}` : '',
+    c.pulso ? `PULSO ${c.pulso}` : '',
+    c.saturacion ? `SATURACIÓN ${c.saturacion}%` : ''
+  ].filter(Boolean).join(', ');
+
+  return [
+    `MOTIVO: ${c.motivo}`,
+    signos ? `SIGNOS VITALES: ${signos}` : '',
+    c.hallazgos ? `HALLAZGOS: ${c.hallazgos}` : '',
+    `DIAGNÓSTICO: ${c.diagnostico}`
+  ].filter(Boolean).join('\n').slice(0, 2000);
+}
+
 // Formulario de solicitud nueva
 exports.mostrarCrear = async (req, res) => {
   try {
@@ -131,13 +157,17 @@ exports.mostrarCrear = async (req, res) => {
 
     const { especialidades, avisoCatalogo } = await cargarEspecialidades();
 
+    // "Derivar a especialista" desde una consulta: el interno y la evaluación ya vienen escritos
+    const consulta = await consultaDeOrigen(req.query.consulta);
+
     res.render('solicitudes/formulario', {
       ...base(req, 'Nueva solicitud'),
       especialidades,
       avisoCatalogo,
       modoSimulado: fundacion.SIMULADO,
-      solicitudForm: {},
-      internoElegido: null,
+      solicitudForm: consulta ? { evaluacion_inicial: evaluacionDesdeConsulta(consulta), id_consulta: consulta.id_consulta } : {},
+      internoElegido: consulta ? await internoModelo.buscarFicha(consulta.id_interno) : null,
+      consultaOrigen: consulta || null,
       enlaceFicha: null,
       mensaje: null
     });
@@ -180,6 +210,12 @@ exports.crear = async (req, res) => {
     const { especialidades, avisoCatalogo } = await cargarEspecialidades();
     const internoElegido = Number.isNaN(idInterno) ? null : await internoModelo.buscarFicha(idInterno);
 
+    // Si viene de una consulta, tiene que ser una consulta vigente DE ESE MISMO interno
+    let consulta = await consultaDeOrigen(req.body.id_consulta);
+    if (consulta && (!internoElegido || consulta.id_interno !== internoElegido.id_interno)) {
+      consulta = null;
+    }
+
     // Vuelve a mostrar el formulario conservando lo que se escribió
     const volver = (mensaje, enlaceFicha) => res.render('solicitudes/formulario', {
       ...base(req, 'Nueva solicitud'),
@@ -189,9 +225,11 @@ exports.crear = async (req, res) => {
       solicitudForm: {
         especialidad: req.body.especialidad,
         especialidad_otra: especialidad && esOtra ? especialidad : '',
-        evaluacion_inicial: evaluacion
+        evaluacion_inicial: evaluacion,
+        id_consulta: consulta ? consulta.id_consulta : ''
       },
       internoElegido,
+      consultaOrigen: consulta,
       enlaceFicha: enlaceFicha || null,
       mensaje
     });
@@ -209,18 +247,22 @@ exports.crear = async (req, res) => {
       return volver('La evaluación inicial debe tener entre 10 y 2000 caracteres.');
     }
 
-    // Para derivar a un interno hace falta saber qué padece (FA-02 del CU-01)
-    const padecimientos = await psicopatologiaModelo.contarActivas(internoElegido.id_interno);
-    if (padecimientos === 0) {
-      return volver(
-        'Antes de derivar, registra al menos un padecimiento vigente de este interno.',
-        `/padecimientos/interno/${internoElegido.id_interno}`
-      );
+    // Para derivar hace falta saber qué tiene el interno (FA-02 del CU-01): un padecimiento vigente,
+    // o una consulta del médico general (por ejemplo una caída: no es un padecimiento, pero hay evaluación)
+    if (!consulta) {
+      const padecimientos = await psicopatologiaModelo.contarActivas(internoElegido.id_interno);
+      if (padecimientos === 0) {
+        return volver(
+          'Antes de derivar, registra una consulta o al menos un padecimiento vigente de este interno.',
+          `/padecimientos/interno/${internoElegido.id_interno}`
+        );
+      }
     }
 
     const idNueva = await solicitudModelo.crear({
       id_interno: internoElegido.id_interno,
       id_medico_general: req.session.idUsuario,
+      id_consulta: consulta ? consulta.id_consulta : null,
       especialidad_requerida: especialidad,
       es_externa: esOtra ? 1 : 0,
       evaluacion_inicial: evaluacion

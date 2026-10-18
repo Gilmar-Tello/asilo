@@ -2,7 +2,8 @@ const pool = require('../config/baseDatos');
 
 // Datos de la visita con los nombres ya armados (fechas como texto, para no pelear con zonas horarias)
 const SELECT_VISITA = `
-  SELECT v.id_visita, v.id_solicitud, v.id_interno, v.id_especialista, v.estado,
+  SELECT v.id_visita, v.id_solicitud, v.id_interno, v.id_especialista, v.estado, v.cerrada,
+         DATE_FORMAT(v.fecha_cierre, '%d/%m/%Y %H:%i') AS fecha_cierre_texto,
          v.diagnostico, v.observaciones,
          v.costo_consulta, v.costo_examenes, v.costo_medicamentos,
          v.subtotal, v.descuento, v.total, v.estado_costo,
@@ -68,7 +69,7 @@ async function buscarPorId(id) {
 
 async function listarExamenes(idVisita) {
   const [filas] = await pool.query(
-    `SELECT id_examen, nombre_examen, costo_estimado, costo_real, estado, resultado, motivo_anulacion, id_examen_origen,
+    `SELECT id_examen, nombre_examen, costo_estimado, costo_real, estado, resultado, motivo_anulacion, id_examen_origen, id_seguimiento,
             DATE_FORMAT(fecha_resultado, '%d/%m/%Y %H:%i') AS fecha_resultado_texto
      FROM tbl_examenes_laboratorio WHERE id_visita = ? ORDER BY id_examen`,
     [idVisita]
@@ -78,7 +79,7 @@ async function listarExamenes(idVisita) {
 
 async function listarRecetas(idVisita) {
   const [filas] = await pool.query(
-    `SELECT id_receta, medicamento, area_aplicacion, cantidad, tiempo_aplicacion, cantidad_despachada, sin_existencia
+    `SELECT id_receta, medicamento, area_aplicacion, cantidad, tiempo_aplicacion, cantidad_despachada, sin_existencia, id_seguimiento
      FROM tbl_recetas_visita WHERE id_visita = ? ORDER BY id_receta`,
     [idVisita]
   );
@@ -192,6 +193,15 @@ async function guardar(datos) {
       );
     }
 
+    // Confirmada: queda EN CURSO (cerrada = 0, espera resultados) o CERRADA. "No asistió" se cierra sola.
+    if (datos.estado !== 'Borrador') {
+      const cerrar = datos.estado === 'No asistió' || datos.cerrar ? 1 : 0;
+      await conexion.query(
+        `UPDATE tbl_visitas_medicas SET cerrada = ?, fecha_cierre = IF(? = 1, NOW(), NULL) WHERE id_visita = ?`,
+        [cerrar, cerrar, idVisita]
+      );
+    }
+
     if (datos.estado === 'Registrada') {
       // La cita ya se atendió. El WHERE evita cerrar una solicitud que dejó de estar programada.
       const [s] = await conexion.query(
@@ -231,6 +241,22 @@ async function guardarCostos(idVisita, costos) {
       WHERE id_visita = ?`,
     [costos.subtotal, costos.descuento, costos.total, idVisita]
   );
+
+  // RN9: si la visita YA se facturó, el cargo del familiar sigue al total nuevo (por ejemplo, el laboratorio
+  // fijó el precio real o se despachó un medicamento después). RN10: si ya no cubre el total, vuelve a "Pendiente de Pago".
+  const [r] = await pool.query(
+    `UPDATE tbl_visitas_medicas
+        SET monto_facturado = total,
+            estado_cobro = IF(monto_pagado >= total, 'Cancelada', 'Pendiente de Pago'),
+            fecha_cancelacion = IF(monto_pagado >= total, COALESCE(fecha_cancelacion, NOW()), NULL)
+      WHERE id_visita = ? AND estado_cobro <> 'Sin facturar'`,
+    [idVisita]
+  );
+
+  if (r.affectedRows > 0) {
+    const [[v]] = await pool.query(`SELECT id_familiar_cobro FROM tbl_visitas_medicas WHERE id_visita = ?`, [idVisita]);
+    await require('./cobroModelo').recalcularSaldo(pool, v.id_familiar_cobro);
+  }
 }
 
 // Visitas registradas cuyo costo quedó "pendiente de cálculo" (FE-02): se reintentan solas
@@ -244,7 +270,108 @@ async function listarCostosPendientes() {
   return filas;
 }
 
+// Visitas EN CURSO de un especialista (confirmadas y sin cerrar), con cuántos exámenes esperan resultado
+async function enCurso(idEspecialista) {
+  const [filas] = await pool.query(
+    SELECT_VISITA.replace('FROM tbl_visitas_medicas v', `,
+         (SELECT COUNT(*) FROM tbl_examenes_laboratorio ex WHERE ex.id_visita = v.id_visita AND ex.estado = 'Ordenado') AS examenes_pendientes,
+         (SELECT COUNT(*) FROM tbl_examenes_laboratorio ex WHERE ex.id_visita = v.id_visita AND ex.estado = 'Con resultado') AS examenes_con_resultado
+  FROM tbl_visitas_medicas v`) + `
+     WHERE v.id_especialista = ? AND v.estado = 'Registrada' AND v.cerrada = 0
+     ORDER BY v.fecha_visita`,
+    [idEspecialista]
+  );
+  return filas;
+}
+
+async function seguimientos(idVisita) {
+  const [filas] = await pool.query(
+    `SELECT id_seguimiento, nota, DATE_FORMAT(fecha, '%d/%m/%Y %H:%i') AS fecha_texto
+       FROM tbl_seguimientos_visita WHERE id_visita = ? ORDER BY fecha, id_seguimiento`,
+    [idVisita]
+  );
+  return filas;
+}
+
+// Vuelve a sumar los exámenes de la visita (real si existe, aproximado si no) y la deja lista para recalcular
+async function recalcularExamenes(conexion, idVisita) {
+  const [[suma]] = await conexion.query(
+    `SELECT COALESCE(SUM(COALESCE(costo_real, costo_estimado)), 0) AS total FROM tbl_examenes_laboratorio WHERE id_visita = ?`,
+    [idVisita]
+  );
+  await conexion.query(
+    `UPDATE tbl_visitas_medicas
+        SET costo_examenes = ?,
+            estado_costo = IF(costo_consulta + ? + costo_medicamentos > 0, 'Pendiente de cálculo', 'Sin cargos')
+      WHERE id_visita = ?`,
+    [suma.total, suma.total, idVisita]
+  );
+}
+
+// SEGUIMIENTO de una visita en curso: una nota nueva con recetas y/o exámenes nuevos.
+// No modifica nada de lo anterior (RN12): solo agrega. Devuelve el id, o null si la visita ya no está en curso.
+async function agregarSeguimiento(idVisita, nota, examenes, recetas) {
+  const conexion = await pool.getConnection();
+
+  try {
+    await conexion.beginTransaction();
+
+    const [[visita]] = await conexion.query(
+      `SELECT id_visita FROM tbl_visitas_medicas WHERE id_visita = ? AND estado = 'Registrada' AND cerrada = 0 FOR UPDATE`,
+      [idVisita]
+    );
+
+    if (!visita) {
+      await conexion.rollback();
+      return null;
+    }
+
+    const [r] = await conexion.query(
+      `INSERT INTO tbl_seguimientos_visita (id_visita, nota) VALUES (?, ?)`,
+      [idVisita, nota]
+    );
+
+    for (const examen of examenes) {
+      await conexion.query(
+        `INSERT INTO tbl_examenes_laboratorio (id_visita, nombre_examen, costo_estimado, id_seguimiento) VALUES (?, ?, ?, ?)`,
+        [idVisita, examen.nombre, examen.costo, r.insertId]
+      );
+    }
+
+    for (const receta of recetas) {
+      await conexion.query(
+        `INSERT INTO tbl_recetas_visita (id_visita, medicamento, area_aplicacion, cantidad, tiempo_aplicacion, id_seguimiento)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [idVisita, receta.medicamento, receta.area, receta.cantidad, receta.tiempo, r.insertId]
+      );
+    }
+
+    if (examenes.length > 0) {
+      await recalcularExamenes(conexion, idVisita);
+    }
+
+    await conexion.commit();
+    return r.insertId;
+  } catch (error) {
+    await conexion.rollback();
+    throw error;
+  } finally {
+    conexion.release();
+  }
+}
+
+// Cierra una visita en curso. Devuelve cuántas filas cambió (0 = ya estaba cerrada).
+async function cerrar(idVisita) {
+  const [r] = await pool.query(
+    `UPDATE tbl_visitas_medicas SET cerrada = 1, fecha_cierre = NOW()
+      WHERE id_visita = ? AND estado = 'Registrada' AND cerrada = 0`,
+    [idVisita]
+  );
+  return r.affectedRows;
+}
+
 module.exports = {
+  enCurso, seguimientos, agregarSeguimiento, cerrar,
   agenda, buscarCita, buscarBorrador, buscarPorId, listarExamenes, listarRecetas,
   listar, historialDelInterno, guardar, guardarCostos, listarCostosPendientes
 };

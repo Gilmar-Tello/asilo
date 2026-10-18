@@ -1,0 +1,60 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Consultas médicas</h2>
+    <div class="text-muted">Atención del médico general dentro del asilo (sin costo de consulta)</div>
+  </div>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+{{#if (puede 'consultas:crear')}}
+  <div class="card mb-4 border-success">
+    <div class="card-body">
+      <label for="buscar_paciente" class="form-label fw-bold">Nueva consulta: ¿a quién atiendes?</label>
+      <input type="search" id="buscar_paciente" class="form-control form-control-lg" autofocus autocomplete="off"
+             placeholder="Escribe el nombre o el DPI del interno…"
+             data-autocompletar="/buscar/internos" data-modo="ir" data-ir="/consultas/nueva/{id}">
+      <div class="form-text">Elige al interno de la lista y se abre su consulta.</div>
+    </div>
+  </div>
+{{/if}}
+
+<form class="row g-2 mb-3" action="/consultas" method="GET">
+  <div class="col-12 col-md-6">
+    <input type="search" class="form-control" name="q" value="{{busqueda}}" maxlength="100" autocomplete="off"
+           placeholder="Buscar en el historial: interno, motivo o diagnóstico"
+           data-autocompletar="/buscar/internos" data-modo="enviar">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-primary">Buscar</button>
+    {{#if busqueda}}<a href="/consultas" class="btn btn-link">Limpiar</a>{{/if}}
+  </div>
+</form>
+
+<h5>{{#if busqueda}}Consultas que coinciden{{else}}Últimas consultas{{/if}}</h5>
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr><th>Fecha</th><th>Interno</th><th>Motivo</th><th>Diagnóstico</th><th>Médico</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{#each consultas}}
+        <tr {{#if anulada}}class="text-muted"{{/if}}>
+          <td>{{fecha_texto}}</td>
+          <td>{{interno_nombre}}</td>
+          <td class="small">{{motivo}}</td>
+          <td class="small">
+            {{#if anulada}}<s>{{diagnostico}}</s> <span class="badge text-bg-secondary">Anulada</span>{{else}}{{diagnostico}}{{/if}}
+            {{#if id_solicitud}}<span class="badge text-bg-primary">Derivada</span>{{/if}}
+          </td>
+          <td>{{medico_nombre}}</td>
+          <td class="text-end"><a href="/consultas/{{id_consulta}}" class="btn btn-sm btn-outline-primary">Ver</a></td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-center text-muted py-4">No hay consultas registradas.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

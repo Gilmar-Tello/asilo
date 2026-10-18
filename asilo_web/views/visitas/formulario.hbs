@@ -130,7 +130,7 @@
       {{#each visitaForm.recetas}}
         <div class="row g-2 mb-2 fila-dinamica">
           <div class="col-12 col-md-3">
-            <input type="text" class="form-control" name="receta_medicamento[]" maxlength="100" placeholder="Medicamento" list="catalogo-medicamentos" value="{{medicamento}}">
+            <input type="text" class="form-control" name="receta_medicamento[]" maxlength="100" placeholder="Medicamento (escribe para buscar)" autocomplete="off" data-autocompletar="/buscar/medicamentos" data-modo="texto" value="{{medicamento}}">
           </div>
           <div class="col-12 col-md-3">
             <input type="text" class="form-control" name="receta_area[]" maxlength="60" placeholder="Área de aplicación" value="{{area}}">
@@ -149,14 +149,17 @@
 
   <div class="d-flex flex-wrap gap-2">
     <button type="submit" name="accion" value="confirmar" class="btn btn-success"
-            onclick="return confirm('¿Confirmar la visita? Después ya no se podrá modificar.');">Confirmar visita</button>
+            onclick="return confirm('¿Confirmar y CERRAR la visita? Ya no se podrán agregar seguimientos.');">Confirmar y cerrar visita</button>
+    <button type="submit" name="accion" value="confirmar_curso" class="btn btn-outline-success"
+            onclick="return confirm('¿Confirmar y dejar la visita EN CURSO? Podrás agregar seguimientos (por ejemplo al llegar los resultados) y cerrarla después.');">Confirmar y dejar en curso</button>
     <button type="submit" name="accion" value="borrador" class="btn btn-outline-primary">Guardar borrador</button>
     <button type="submit" name="accion" value="no_asistio" class="btn btn-outline-danger" formnovalidate
             onclick="return confirm('¿Registrar que el interno NO asistió? No se generará ningún cargo.');">El interno no asistió</button>
   </div>
   <p class="text-muted small mt-2">
-    Un borrador te permite retomar la visita sin volver a escribir. Una visita confirmada pasa al historial clínico
-    y no se puede modificar ni borrar.
+    Un borrador te permite retomar la visita sin volver a escribir. Lo confirmado pasa al historial clínico y no se
+    modifica ni se borra. Si esperas resultados de exámenes, déjala <strong>en curso</strong>: cuando lleguen agregarás
+    un seguimiento con los medicamentos nuevos y la cerrarás.
   </p>
 
 </form>
@@ -177,7 +180,7 @@
 <template id="plantilla-receta">
   <div class="row g-2 mb-2 fila-dinamica">
     <div class="col-12 col-md-3">
-      <input type="text" class="form-control" name="receta_medicamento[]" maxlength="100" placeholder="Medicamento" list="catalogo-medicamentos">
+      <input type="text" class="form-control" name="receta_medicamento[]" maxlength="100" placeholder="Medicamento (escribe para buscar)" autocomplete="off" data-autocompletar="/buscar/medicamentos" data-modo="texto">
     </div>
     <div class="col-12 col-md-3">
       <input type="text" class="form-control" name="receta_area[]" maxlength="60" placeholder="Área de aplicación">
@@ -192,9 +195,6 @@
   </div>
 </template>
 
-{{!-- Sugerencias al recetar: los medicamentos del catálogo de farmacia (se puede escribir otro) --}}
-<datalist id="catalogo-medicamentos">
-  {{#each catalogo}}<option value="{{nombre}}">{{presentacion}}</option>{{/each}}
-</datalist>
+{{!-- Al recetar se sugieren los medicamentos del catálogo de farmacia mientras se escribe (se puede escribir otro) --}}
 
 <script src="/js/visita-formulario.js"></script>

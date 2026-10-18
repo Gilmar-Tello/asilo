@@ -21,8 +21,9 @@ async function listar(busqueda) {
   const valores = [];
 
   if (busqueda) {
-    sql += ` WHERE m.nombre LIKE ? OR m.presentacion LIKE ?`;
-    valores.push(`%${busqueda}%`, `%${busqueda}%`);
+    // CONCAT: así también encuentra lo que el buscador sugiere ("LOSARTAN TABLETA 50 MG")
+    sql += ` WHERE CONCAT_WS(' ', m.nombre, m.presentacion) LIKE ?`;
+    valores.push(`%${busqueda}%`);
   }
 
   sql += ` GROUP BY m.id_medicamento ORDER BY m.estado, m.nombre, m.presentacion LIMIT 300`;

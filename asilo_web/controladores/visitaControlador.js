@@ -1,6 +1,5 @@
 const visitaModelo = require('../modelos/visitaModelo');
 const psicopatologiaModelo = require('../modelos/psicopatologiaModelo');
-const medicamentoModelo = require('../modelos/medicamentoModelo');
 const calculadorCostos = require('../servicios/calculadorCostos');
 const sincronizador = require('../servicios/sincronizadorSolicitudes');
 const { texto, mayus, mayusParrafo } = require('../utilidades/texto');
@@ -20,6 +19,11 @@ const MENSAJES = new Map([
   ['examen_anulado',    { tipo: 'success', texto: 'Resultado anulado. Se conserva en el historial como "Anulado" y se generó una nueva orden de examen para el laboratorio.' }],
   ['examen_no_anulable',{ tipo: 'danger',  texto: 'Ese examen no se puede anular (solo el especialista de la visita, y solo si ya tiene resultado).' }],
   ['motivo_corto',      { tipo: 'danger',  texto: 'Explica por qué se anula el resultado (entre 10 y 255 caracteres).' }],
+  ['seguimiento',       { tipo: 'success', texto: 'Seguimiento agregado. Los medicamentos nuevos ya aparecen en farmacia y los exámenes en laboratorio.' }],
+  ['cerrada',           { tipo: 'success', texto: 'Visita cerrada. Ya no se le pueden agregar seguimientos.' }],
+  ['no_en_curso',       { tipo: 'danger',  texto: 'La visita ya no está en curso: no se le puede agregar nada.' }],
+  ['nota_corta',        { tipo: 'danger',  texto: 'Escribe la nota del seguimiento (qué revisaste y qué decidiste, mínimo 5 caracteres).' }],
+  ['seguimiento_invalido', { tipo: 'danger', texto: 'Revisa los exámenes y medicamentos del seguimiento.' }],
   ['ya_cerrada',  { tipo: 'danger',  texto: 'Esa visita ya se cerró desde otra pantalla: no se puede modificar.' }]
 ]);
 
@@ -141,11 +145,10 @@ function leerFormulario(body, confirmando) {
 
 // Pinta el formulario de la visita con todo lo que el especialista necesita ver (pasos 2 a 4 del CU-04)
 async function mostrarFormulario(req, res, cita, borrador, form, mensaje, tipo = 'danger') {
-  const [padecimientos, historial, catalogo] = await Promise.all([
+  // (los nombres de medicamentos se sugieren mientras se escribe: /buscar/medicamentos)
+  const [padecimientos, historial] = await Promise.all([
     psicopatologiaModelo.listarPorInterno(cita.id_interno),
-    visitaModelo.historialDelInterno(cita.id_interno, borrador ? borrador.id_visita : 0),
-    // Para sugerir nombres al recetar (así farmacia los reconoce). Sigue siendo texto libre.
-    medicamentoModelo.listarActivos()
+    visitaModelo.historialDelInterno(cita.id_interno, borrador ? borrador.id_visita : 0)
   ]);
 
   res.render('visitas/formulario', {
@@ -155,7 +158,6 @@ async function mostrarFormulario(req, res, cita, borrador, form, mensaje, tipo =
     visitaForm: form,
     padecimientos,
     historial,
-    catalogo,
     mensaje,
     tipo: mensaje ? tipo : null
   });
@@ -187,12 +189,16 @@ async function formularioDesdeBorrador(borrador) {
 // Mi agenda: las citas programadas a mi nombre
 exports.agenda = async (req, res) => {
   try {
-    const filas = await visitaModelo.agenda(req.session.idUsuario);
+    const [filas, enCurso] = await Promise.all([
+      visitaModelo.agenda(req.session.idUsuario),
+      visitaModelo.enCurso(req.session.idUsuario)
+    ]);
     const aviso = MENSAJES.get(req.query.msg);
 
     res.render('visitas/agenda', {
       ...base(req, 'Mi agenda de visitas'),
       citas: filas,
+      enCurso,
       mensaje: aviso ? aviso.texto : null,
       tipo: aviso ? aviso.tipo : null
     });
@@ -260,7 +266,10 @@ exports.atender = async (req, res) => {
     }
 
     const borrador = await visitaModelo.buscarBorrador(idSolicitud);
-    const accion = ['borrador', 'confirmar', 'no_asistio'].includes(req.body.accion) ? req.body.accion : 'borrador';
+    // confirmar = confirmar y CERRAR; confirmar_curso = confirmar y dejar EN CURSO (espera resultados)
+    const accionPedida = ['borrador', 'confirmar', 'confirmar_curso', 'no_asistio'].includes(req.body.accion) ? req.body.accion : 'borrador';
+    const dejarEnCurso = accionPedida === 'confirmar_curso';
+    const accion = dejarEnCurso ? 'confirmar' : accionPedida;
 
     const { errores, datos } = leerFormulario(req.body, accion === 'confirmar');
 
@@ -289,7 +298,8 @@ exports.atender = async (req, res) => {
       costo_examenes: sinCargos ? 0 : datos.costo_examenes,
       examenes: sinCargos ? [] : datos.examenes,
       recetas: sinCargos ? [] : datos.recetas,
-      estado
+      estado,
+      cerrar: !dejarEnCurso
     });
 
     // null = la visita ya se cerró en otra pantalla, o la cita dejó de estar programada
@@ -345,14 +355,35 @@ exports.detalle = async (req, res) => {
       });
     }
 
-    const [examenes, recetas] = await Promise.all([
+    const [examenes, recetas, seguimientos] = await Promise.all([
       visitaModelo.listarExamenes(id),
-      visitaModelo.listarRecetas(id)
+      visitaModelo.listarRecetas(id),
+      visitaModelo.seguimientos(id)
     ]);
 
-    const aviso = MENSAJES.get(req.query.msg);
+    const enCurso = visita.estado === 'Registrada' && visita.cerrada === 0;
+    // Agregar seguimientos y cerrar: solo el especialista de esta visita, mientras está en curso
+    const puedeSeguir = enCurso && esMia;
+    const fechaSeguimiento = new Map(seguimientos.map((s) => [s.id_seguimiento, s.fecha_texto]));
+    const marcar = (x) => ({ ...x, seguimiento_texto: x.id_seguimiento ? fechaSeguimiento.get(x.id_seguimiento) : null });
+
+    let aviso = MENSAJES.get(req.query.msg);
+
+    // El detalle de qué estaba mal en el seguimiento viaja una sola vez en la sesión (no cabe en la URL)
+    if (req.query.msg === 'seguimiento_invalido' && req.session.errorSeguimiento) {
+      aviso = { tipo: 'danger', texto: req.session.errorSeguimiento };
+    }
+    delete req.session.errorSeguimiento;
 
     res.render('visitas/detalle', {
+      enCurso,
+      puedeSeguir,
+      seguimientos: seguimientos.map((s) => ({
+        ...s,
+        examenes: examenes.filter((e) => e.id_seguimiento === s.id_seguimiento),
+        recetas: recetas.filter((r) => r.id_seguimiento === s.id_seguimiento)
+      })),
+      examenesPendientes: examenes.filter((e) => e.estado === 'Ordenado').length,
       ...base(req, `Visita #${visita.id_visita}`),
       visita: {
         ...visita,
@@ -361,8 +392,8 @@ exports.detalle = async (req, res) => {
         hayCostos: visita.estado === 'Registrada' && visita.estado_costo !== 'Sin cargos',
         calculado: visita.estado_costo === 'Calculado'
       },
-      examenes,
-      recetas,
+      examenes: examenes.map(marcar),
+      recetas: recetas.map(marcar),
       esMia,
       // Anular un resultado equivocado: solo el especialista de esta visita (o el administrador)
       puedeAnular: visita.estado === 'Registrada' && tienePermiso(res, 'examenes:anular') && (esMia || res.locals.rolEsSistema),
@@ -372,5 +403,72 @@ exports.detalle = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.send('Error al cargar la visita');
+  }
+};
+
+// La visita en curso de ESTE especialista (o null). Así nadie agrega ni cierra visitas ajenas.
+async function visitaEnCursoPropia(req) {
+  const id = parseInt(req.params.id, 10);
+  const visita = Number.isNaN(id) ? null : await visitaModelo.buscarPorId(id);
+
+  if (!visita || visita.id_especialista !== req.session.idUsuario) return null;
+  return visita;
+}
+
+// SEGUIMIENTO: el especialista revisa resultados y agrega una nota con recetas y/o exámenes nuevos
+exports.agregarSeguimiento = async (req, res) => {
+  try {
+    const visita = await visitaEnCursoPropia(req);
+
+    if (!visita) return res.redirect('/visitas/agenda?msg=no_existe');
+    if (visita.estado !== 'Registrada' || visita.cerrada !== 0) {
+      return res.redirect(`/visitas/${visita.id_visita}?msg=no_en_curso`);
+    }
+
+    const nota = mayusParrafo(req.body.nota);
+    // Se reutiliza la lectura de exámenes y recetas del formulario de la visita (mismas reglas)
+    const { errores, datos } = leerFormulario(req.body, false);
+
+    if (nota.length < 5 || nota.length > 5000) {
+      return res.redirect(`/visitas/${visita.id_visita}?msg=nota_corta`);
+    }
+    if (errores.length > 0) {
+      req.session.errorSeguimiento = errores.join(' ');
+      return res.redirect(`/visitas/${visita.id_visita}?msg=seguimiento_invalido`);
+    }
+
+    const idSeguimiento = await visitaModelo.agregarSeguimiento(visita.id_visita, nota, datos.examenes, datos.recetas);
+
+    if (!idSeguimiento) {
+      return res.redirect(`/visitas/${visita.id_visita}?msg=no_en_curso`);
+    }
+
+    // Si se ordenaron exámenes nuevos, el total de la visita cambió: se recalcula
+    if (datos.examenes.length > 0) {
+      const actual = await visitaModelo.buscarPorId(visita.id_visita);
+      if (actual.estado_costo === 'Pendiente de cálculo') {
+        await calculadorCostos.calcularVisita(actual);
+      }
+    }
+
+    res.redirect(`/visitas/${visita.id_visita}?msg=seguimiento`);
+  } catch (error) {
+    console.error(error);
+    res.send('Error al guardar el seguimiento');
+  }
+};
+
+// Cerrar la visita: el especialista ya no necesita nada más
+exports.cerrar = async (req, res) => {
+  try {
+    const visita = await visitaEnCursoPropia(req);
+
+    if (!visita) return res.redirect('/visitas/agenda?msg=no_existe');
+
+    const cambio = await visitaModelo.cerrar(visita.id_visita);
+    res.redirect(`/visitas/${visita.id_visita}?msg=${cambio ? 'cerrada' : 'no_en_curso'}`);
+  } catch (error) {
+    console.error(error);
+    res.send('Error al cerrar la visita');
   }
 };

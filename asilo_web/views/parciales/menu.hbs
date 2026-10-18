@@ -51,10 +51,13 @@
         </li>
       {{/if}}
 
-      {{#if (puede 'visitas:ver' 'visitas:atender' 'examenes:ver' 'examenes:registrar_resultado')}}
+      {{#if (puede 'consultas:ver' 'consultas:crear' 'visitas:ver' 'visitas:atender' 'examenes:ver' 'examenes:registrar_resultado')}}
         <li class="nav-item mt-3">
           <span class="text-uppercase small fw-bold text-secondary px-3">Atención médica</span>
         </li>
+        {{#if (puede 'consultas:ver' 'consultas:crear')}}
+          <li class="nav-item"><a class="nav-link" href="/consultas">Consultas del médico general</a></li>
+        {{/if}}
         {{#if (puede 'visitas:atender')}}
           <li class="nav-item"><a class="nav-link" href="/visitas/agenda">Mi agenda de visitas</a></li>
         {{/if}}
@@ -79,20 +82,20 @@
         <li class="nav-item"><a class="nav-link" href="/farmacia/despachos">Despachos</a></li>
       {{/if}}
 
-      {{!-- Estos módulos todavía no existen ni tienen permisos: por ahora solo los ve el
-            administrador. Cuando se construya cada uno, se le crean sus permisos y se pasa
-            arriba, con su propio if (puede ...). --}}
-      {{#if rolEsSistema}}
-
+      {{#if (puede 'finanzas:ver' 'finanzas:cobrar' 'finanzas:registrar')}}
         <li class="nav-item mt-3">
           <span class="text-uppercase small fw-bold text-secondary px-3">Finanzas</span>
         </li>
-        <li class="nav-item"><a class="nav-link" href="#">Caja (entradas y salidas)</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Cuotas de familiares</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Donaciones</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Facturación</a></li>
-        <li class="nav-item"><a class="nav-link" href="#">Pagos a la Fundación</a></li>
+        <li class="nav-item"><a class="nav-link" href="/finanzas/caja">Caja (entradas y salidas)</a></li>
+        <li class="nav-item"><a class="nav-link" href="/finanzas/cuentas">Cuentas de familiares</a></li>
+        <li class="nav-item"><a class="nav-link" href="/finanzas/cuotas">Cuotas mensuales</a></li>
+        <li class="nav-item"><a class="nav-link" href="/finanzas/donaciones">Donaciones</a></li>
+        <li class="nav-item"><a class="nav-link" href="/finanzas/facturacion">Facturación</a></li>
+        <li class="nav-item"><a class="nav-link" href="/finanzas/fundacion">Pagos a la Fundación</a></li>
+      {{/if}}
 
+      {{!-- Reportes todavía no existe ni tiene permisos: por ahora solo lo ve el administrador. --}}
+      {{#if rolEsSistema}}
         <li class="nav-item mt-3">
           <span class="text-uppercase small fw-bold text-secondary px-3">Reportes</span>
         </li>

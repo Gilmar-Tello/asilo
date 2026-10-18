@@ -1,0 +1,93 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-1">Consulta #{{consulta.id_consulta}}</h2>
+    {{#if consulta.anulada}}<span class="badge text-bg-secondary fs-6">Anulada</span>{{/if}}
+    {{#if consulta.id_solicitud}}<a href="/solicitudes/{{consulta.id_solicitud}}" class="badge text-bg-primary fs-6 text-decoration-none">Derivada · solicitud #{{consulta.id_solicitud}}</a>{{/if}}
+  </div>
+  <a href="/consultas" class="btn btn-outline-secondary">Volver a consultas</a>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-{{tipo}}">{{mensaje}}</div>
+{{/if}}
+
+{{#if consulta.anulada}}
+  <div class="alert alert-secondary"><strong>Anulada.</strong> Motivo: {{consulta.motivo_anulacion}}</div>
+{{/if}}
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Interno</div>
+      <div class="card-body">
+        <p class="mb-1"><strong>{{consulta.interno_nombre}}</strong></p>
+        <p class="mb-0">DPI {{consulta.interno_dpi}} · {{consulta.interno_edad}} años</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">Atención</div>
+      <div class="card-body">
+        <p class="mb-1">Fecha: <strong>{{consulta.fecha_texto}}</strong></p>
+        <p class="mb-1">Médico general: <strong>{{consulta.medico_nombre}}</strong></p>
+        <p class="mb-0 small">
+          {{#if consulta.temperatura}}Temperatura {{consulta.temperatura}} °C · {{/if}}
+          {{#if consulta.presion}}Presión {{consulta.presion}} · {{/if}}
+          {{#if consulta.pulso}}Pulso {{consulta.pulso}} lpm · {{/if}}
+          {{#if consulta.saturacion}}Saturación {{consulta.saturacion}}%{{/if}}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <p class="mb-2"><span class="text-muted">Motivo:</span> <span style="white-space: pre-line;">{{consulta.motivo}}</span></p>
+    {{#if consulta.hallazgos}}<p class="mb-2"><span class="text-muted">Hallazgos:</span> <span style="white-space: pre-line;">{{consulta.hallazgos}}</span></p>{{/if}}
+    <p class="mb-2"><span class="text-muted">Diagnóstico:</span> <strong style="white-space: pre-line;">{{consulta.diagnostico}}</strong></p>
+    {{#if consulta.indicaciones}}<p class="mb-0"><span class="text-muted">Indicaciones:</span> <span style="white-space: pre-line;">{{consulta.indicaciones}}</span></p>{{/if}}
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header">Receta</div>
+  <ul class="list-group list-group-flush">
+    {{#each recetas}}
+      <li class="list-group-item">
+        <strong>{{nombre}} {{presentacion}}</strong> · {{cantidad}} · {{indicaciones}}
+        <div class="small text-muted">Despachado: {{cantidad_despachada}} de {{cantidad}}</div>
+        {{#if sin_existencia}}<div class="small text-danger fw-bold">Farmacia no tiene existencia: valora una sustitución.</div>{{/if}}
+      </li>
+    {{else}}
+      <li class="list-group-item text-muted">Sin medicamentos recetados.</li>
+    {{/each}}
+  </ul>
+</div>
+
+{{#unless consulta.anulada}}
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    {{#if (puede 'psicopatologias:crear')}}
+      <a href="/padecimientos/interno/{{consulta.id_interno}}" class="btn btn-outline-primary">Registrar padecimiento crónico</a>
+    {{/if}}
+    {{#unless consulta.id_solicitud}}
+      {{#if (puede 'solicitudes:crear')}}
+        <a href="/solicitudes/crear?consulta={{consulta.id_consulta}}" class="btn btn-primary">Derivar a especialista</a>
+      {{/if}}
+    {{/unless}}
+  </div>
+
+  {{#if (puede 'consultas:anular')}}
+    <details class="mb-3">
+      <summary class="text-danger small">Anular esta consulta (registrada por error)</summary>
+      <form class="row g-2 mt-2" action="/consultas/{{consulta.id_consulta}}/anular" method="POST"
+            onsubmit="return confirm('¿Anular la consulta? Se conserva en el historial y sus recetas pendientes salen de farmacia.');">
+        <div class="col-12 col-md-8">
+          <input type="text" class="form-control" name="motivo" required minlength="10" maxlength="255" placeholder="Motivo de la anulación">
+        </div>
+        <div class="col-auto"><button class="btn btn-outline-danger">Anular</button></div>
+      </form>
+    </details>
+  {{/if}}
+{{/unless}}

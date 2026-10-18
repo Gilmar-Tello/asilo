@@ -14,7 +14,8 @@
 
 <form class="row g-2 mb-3" action="/medicamentos" method="GET">
   <div class="col-12 col-md-6">
-    <input type="text" class="form-control" name="q" value="{{busqueda}}" placeholder="Buscar por nombre o presentación" maxlength="100">
+    <input type="search" class="form-control" name="q" value="{{busqueda}}" autocomplete="off"
+           data-autocompletar="/buscar/medicamentos?todos=1" data-modo="enviar" placeholder="Buscar por nombre o presentación" maxlength="100">
   </div>
   <div class="col-auto">
     <button type="submit" class="btn btn-outline-primary">Buscar</button>

@@ -2,6 +2,8 @@
   <div>
     <h2 class="mb-1">Visita #{{visita.id_visita}}</h2>
     <span class="badge {{visita.clase_estado}} fs-6">{{visita.estado}}</span>
+    {{#if enCurso}}<span class="badge text-bg-info fs-6">En curso</span>{{/if}}
+    {{#if (eq visita.estado 'Registrada')}}{{#if visita.cerrada}}<span class="badge text-bg-dark fs-6">Cerrada {{visita.fecha_cierre_texto}}</span>{{/if}}{{/if}}
   </div>
   {{#if esMia}}
     <a href="/visitas/agenda" class="btn btn-outline-secondary">Volver a mi agenda</a>
@@ -63,6 +65,7 @@
                 {{#if (eq estado 'Anulado')}}<s>{{nombre_examen}}</s>{{else}}{{nombre_examen}}{{/if}}
                 <span class="badge text-bg-light border">{{estado}}</span>
                 {{#if id_examen_origen}}<span class="badge text-bg-info">Repetición</span>{{/if}}
+                {{#if seguimiento_texto}}<span class="badge text-bg-light border">Seguimiento {{seguimiento_texto}}</span>{{/if}}
               </span>
               <span>
                 {{#if costo_real}}Q {{costo_real}} <span class="small text-muted">(real)</span>
@@ -99,6 +102,7 @@
         {{#each recetas}}
           <li class="list-group-item">
             <strong>{{medicamento}}</strong> · {{cantidad}} unidad(es) · {{tiempo_aplicacion}}
+            {{#if seguimiento_texto}}<span class="badge text-bg-light border">Seguimiento {{seguimiento_texto}}</span>{{/if}}
             {{#if area_aplicacion}}<div class="small text-muted">Área: {{area_aplicacion}}</div>{{/if}}
             <div class="small text-muted">Despachado: {{cantidad_despachada}} de {{cantidad}}</div>
             {{#if sin_existencia}}
@@ -112,6 +116,73 @@
     </div>
   </div>
 </div>
+
+{{#if seguimientos}}
+  <h5>Seguimientos</h5>
+  <div class="list-group mb-3">
+    {{#each seguimientos}}
+      <div class="list-group-item">
+        <div class="small text-muted">{{fecha_texto}}</div>
+        <div style="white-space: pre-line;">{{nota}}</div>
+        {{#if recetas}}<div class="small mt-1">Medicamentos: {{#each recetas}}{{medicamento}} ({{cantidad}}, {{tiempo_aplicacion}}){{#unless @last}}; {{/unless}}{{/each}}</div>{{/if}}
+        {{#if examenes}}<div class="small">Exámenes: {{#each examenes}}{{nombre_examen}}{{#unless @last}}, {{/unless}}{{/each}}</div>{{/if}}
+      </div>
+    {{/each}}
+  </div>
+{{/if}}
+
+{{#if puedeSeguir}}
+  <div class="card mb-3 border-info">
+    <div class="card-header">Agregar seguimiento <span class="small text-muted">· por ejemplo al revisar los resultados</span></div>
+    <div class="card-body">
+      <form action="/visitas/{{visita.id_visita}}/seguimiento" method="POST">
+        <div class="mb-3">
+          <label for="nota" class="form-label">Nota *</label>
+          <textarea class="form-control" id="nota" name="nota" rows="3" required minlength="5" maxlength="5000"
+                    placeholder="Ej. RADIOGRAFÍA SIN FRACTURA, SOLO CONTUSIÓN. SE CAMBIA EL ANALGÉSICO."></textarea>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong class="small">Medicamentos nuevos</strong>
+          <button type="button" class="btn btn-sm btn-outline-primary" data-agregar="seg-recetas" data-plantilla="plantilla-receta">+ Medicamento</button>
+        </div>
+        <div id="seg-recetas" class="mb-3"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong class="small">Exámenes nuevos <span class="text-muted">(precio aproximado)</span></strong>
+          <button type="button" class="btn btn-sm btn-outline-primary" data-agregar="seg-examenes" data-plantilla="plantilla-examen">+ Examen</button>
+        </div>
+        <div id="seg-examenes" class="mb-3"></div>
+
+        <button type="submit" class="btn btn-info">Guardar seguimiento</button>
+      </form>
+    </div>
+  </div>
+
+  <form action="/visitas/{{visita.id_visita}}/cerrar" method="POST" class="mb-4"
+        onsubmit="return confirm('{{#if examenesPendientes}}Hay {{examenesPendientes}} examen(es) sin resultado. {{/if}}¿Cerrar la visita? Ya no se podrán agregar seguimientos.');">
+    <button class="btn btn-dark">Cerrar visita</button>
+    {{#if examenesPendientes}}<span class="small text-warning-emphasis ms-2">Aún hay {{examenesPendientes}} examen(es) esperando resultado.</span>{{/if}}
+  </form>
+
+  <template id="plantilla-receta">
+    <div class="row g-2 mb-2 fila-dinamica">
+      <div class="col-12 col-md-3"><input type="text" class="form-control" name="receta_medicamento[]" maxlength="100" placeholder="Medicamento (escribe para buscar)" autocomplete="off" data-autocompletar="/buscar/medicamentos" data-modo="texto"></div>
+      <div class="col-12 col-md-3"><input type="text" class="form-control" name="receta_area[]" maxlength="60" placeholder="Área de aplicación"></div>
+      <div class="col-4 col-md-2"><input type="number" class="form-control" name="receta_cantidad[]" min="1" max="9999" step="1" placeholder="Cantidad"></div>
+      <div class="col-8 col-md-2"><input type="text" class="form-control" name="receta_tiempo[]" maxlength="60" placeholder="Tiempo (ej. 7 DÍAS)"></div>
+      <div class="col-12 col-md-2"><button type="button" class="btn btn-outline-danger w-100 quitar-fila">Quitar</button></div>
+    </div>
+  </template>
+  <template id="plantilla-examen">
+    <div class="row g-2 mb-2 fila-dinamica">
+      <div class="col-12 col-md-7"><input type="text" class="form-control" name="examen_nombre[]" maxlength="100" placeholder="Examen (ej. RADIOGRAFÍA DE CADERA)"></div>
+      <div class="col-8 col-md-3"><input type="number" class="form-control" name="examen_costo[]" min="0" max="99999.99" step="0.01" placeholder="Precio aproximado"></div>
+      <div class="col-4 col-md-2"><button type="button" class="btn btn-outline-danger w-100 quitar-fila">Quitar</button></div>
+    </div>
+  </template>
+  <script src="/js/visita-formulario.js"></script>
+{{/if}}
 
 <div class="card mb-3">
   <div class="card-header d-flex justify-content-between">

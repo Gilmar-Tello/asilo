@@ -11,7 +11,8 @@
 
 <form class="row g-2 mb-3" action="/examenes" method="GET">
   <div class="col-12 col-md-4">
-    <input type="text" class="form-control" name="q" value="{{busqueda}}"
+    <input type="search" class="form-control" name="q" value="{{busqueda}}" autocomplete="off"
+           data-autocompletar="/buscar/internos" data-modo="enviar"
            placeholder="Buscar por interno o examen" maxlength="100">
   </div>
   <div class="col-12 col-md-3">

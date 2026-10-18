@@ -1,0 +1,71 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Pagos a la Fundación</h2>
+    <div class="text-muted">Lo que el asilo le debe a la Fundación por sus servicios, ya con el 20% de descuento (RQ7)</div>
+  </div>
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+<div class="row g-2 mb-4">
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-2"><div class="small text-muted">Visitas facturadas</div><div class="fw-bold">Q {{deuda.visitas}}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-2"><div class="small text-muted">Medicamentos facturados</div><div class="fw-bold">Q {{deuda.medicamentos}}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-2"><div class="small text-muted">Pagado a la Fundación</div><div class="fw-bold text-success">Q {{deuda.pagado}}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card border-danger"><div class="card-body py-2"><div class="small text-muted">Deuda actual</div><div class="fs-5 fw-bold text-danger">Q {{deuda.deuda}}</div></div></div></div>
+</div>
+
+{{#if (puede 'finanzas:registrar')}}
+  {{#if deuda.hayDeuda}}
+    <div class="card mb-4">
+      <div class="card-header">Registrar pago a la Fundación</div>
+      <div class="card-body">
+        <form class="row g-2" action="/finanzas/fundacion/pagos" method="POST">
+          <div class="col-6 col-md-2"><label class="form-label small">Monto (Q) *</label>
+            <input type="number" name="monto" class="form-control" required min="0.01" max="{{deuda.deuda}}" step="0.01" value="{{pagoForm.monto}}"></div>
+          <div class="col-6 col-md-2"><label class="form-label small">Fecha *</label>
+            <input type="date" name="fecha" class="form-control" required max="{{hoy}}" value="{{pagoForm.fecha}}"></div>
+          <div class="col-6 col-md-2"><label class="form-label small">Forma *</label>
+            <select name="forma_pago" class="form-select" required>
+              {{#each formas}}<option value="{{this}}" {{#if (eq this ../pagoForm.forma_pago)}}selected{{/if}}>{{this}}</option>{{/each}}
+            </select></div>
+          <div class="col-6 col-md-2"><label class="form-label small">Referencia</label>
+            <input type="text" name="referencia" class="form-control" maxlength="60" value="{{pagoForm.referencia}}"></div>
+          <div class="col-12 col-md-3"><label class="form-label small">Observación</label>
+            <input type="text" name="observacion" class="form-control" maxlength="255" value="{{pagoForm.observacion}}"></div>
+          <div class="col-12 col-md-1 d-flex align-items-end"><button class="btn btn-success w-100">Pagar</button></div>
+        </form>
+      </div>
+    </div>
+  {{else}}
+    <div class="alert alert-success">El asilo no tiene deuda con la Fundación.</div>
+  {{/if}}
+{{/if}}
+
+<h5>Pagos realizados</h5>
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead class="table-light"><tr><th>Fecha</th><th>Forma</th><th>Referencia</th><th>Observación</th><th class="text-end">Monto</th><th>Registró</th><th></th></tr></thead>
+    <tbody>
+      {{#each pagos}}
+        <tr {{#if anulado}}class="text-muted"{{/if}}>
+          <td>{{fecha_texto}}</td><td>{{forma_pago}}</td><td>{{referencia}}</td><td class="small">{{observacion}}</td>
+          <td class="text-end">{{#if anulado}}<s>Q {{monto}}</s> <span class="badge text-bg-secondary">Anulado</span>{{else}}Q {{monto}}{{/if}}</td>
+          <td class="small">{{usuario_nombre}}</td>
+          <td class="text-end">
+            {{#if anulado}}<span class="small">{{motivo_anulacion}}</span>
+            {{else}}{{#if (puede 'finanzas:anular')}}
+              <details><summary class="small text-danger">Anular</summary>
+                <form class="d-flex gap-1 mt-1" action="/finanzas/fundacion/pagos/{{id_pago_fundacion}}/anular" method="POST" onsubmit="return confirm('¿Anular este pago?');">
+                  <input type="text" class="form-control form-control-sm" name="motivo" required minlength="10" maxlength="255" placeholder="Motivo">
+                  <button class="btn btn-sm btn-outline-danger">Anular</button>
+                </form>
+              </details>
+            {{/if}}{{/if}}
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="7" class="text-center text-muted py-3">Todavía no hay pagos a la Fundación.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,93 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Caja</h2>
+    <div class="text-muted">Entradas (pagos de familiares, donaciones) y salidas (gastos operativos, pagos a la Fundación)</div>
+  </div>
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+<form class="row g-2 mb-3 align-items-end" action="/finanzas/caja" method="GET">
+  <div class="col-auto"><label class="form-label small">Desde</label><input type="date" name="desde" class="form-control" value="{{desde}}"></div>
+  <div class="col-auto"><label class="form-label small">Hasta</label><input type="date" name="hasta" class="form-control" value="{{hasta}}"></div>
+  <div class="col-auto"><button class="btn btn-outline-primary">Ver período</button></div>
+</form>
+
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-2"><div class="small text-muted">Saldo inicial</div><div class="fw-bold">Q {{libro.saldoInicial}}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-2"><div class="small text-muted">Entradas</div><div class="fw-bold text-success">+ Q {{libro.entradas}}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card"><div class="card-body py-2"><div class="small text-muted">Salidas</div><div class="fw-bold text-danger">- Q {{libro.salidas}}</div></div></div></div>
+  <div class="col-6 col-md-3"><div class="card border-primary"><div class="card-body py-2"><div class="small text-muted">Saldo final</div><div class="fw-bold">Q {{libro.saldoFinal}}</div></div></div></div>
+</div>
+
+<h5>Libro de caja</h5>
+<div class="table-responsive mb-4">
+  <table class="table table-sm align-middle">
+    <thead class="table-light"><tr><th>Fecha</th><th>Origen</th><th>Detalle</th><th class="text-end">Entrada</th><th class="text-end">Salida</th><th class="text-end">Saldo</th></tr></thead>
+    <tbody>
+      <tr class="table-light"><td colspan="5" class="small">Saldo al iniciar el período</td><td class="text-end">Q {{libro.saldoInicial}}</td></tr>
+      {{#each libro.filas}}
+        <tr>
+          <td>{{fecha_texto}}</td>
+          <td><span class="badge {{#if (eq tipo 'Entrada')}}text-bg-success{{else}}text-bg-danger{{/if}}">{{origen}}</span></td>
+          <td class="small">{{detalle}}</td>
+          <td class="text-end">{{#if (eq tipo 'Entrada')}}Q {{monto}}{{/if}}</td>
+          <td class="text-end">{{#if (eq tipo 'Salida')}}Q {{monto}}{{/if}}</td>
+          <td class="text-end">Q {{saldo}}</td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-center text-muted py-3">Sin movimientos en este período.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<h5>Gastos operativos</h5>
+{{#if (puede 'finanzas:registrar')}}
+  <div class="card mb-3">
+    <div class="card-body">
+      <form class="row g-2" action="/finanzas/gastos" method="POST">
+        <div class="col-12 col-md-3">
+          <select name="concepto" class="form-select" required>
+            <option value="">Concepto…</option>
+            {{#each conceptos}}<option value="{{this}}" {{#if (eq this ../gastoForm.concepto)}}selected{{/if}}>{{this}}</option>{{/each}}
+          </select>
+        </div>
+        <div class="col-12 col-md-4">
+          <input type="text" name="descripcion" class="form-control" maxlength="255" value="{{gastoForm.descripcion}}" placeholder="Descripción (ej. FACTURA EEGSA SEPTIEMBRE)">
+        </div>
+        <div class="col-6 col-md-2"><input type="number" name="monto" class="form-control" required min="0.01" step="0.01" value="{{gastoForm.monto}}" placeholder="Monto Q"></div>
+        <div class="col-6 col-md-2"><input type="date" name="fecha" class="form-control" required max="{{hoy}}" value="{{gastoForm.fecha}}"></div>
+        <div class="col-12 col-md-1"><button class="btn btn-danger w-100">Registrar</button></div>
+      </form>
+    </div>
+  </div>
+{{/if}}
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead class="table-light"><tr><th>Fecha</th><th>Concepto</th><th>Descripción</th><th class="text-end">Monto</th><th>Registró</th><th></th></tr></thead>
+    <tbody>
+      {{#each gastos}}
+        <tr {{#if anulado}}class="text-muted"{{/if}}>
+          <td>{{fecha_texto}}</td><td>{{concepto}}</td><td class="small">{{descripcion}}</td>
+          <td class="text-end">{{#if anulado}}<s>Q {{monto}}</s> <span class="badge text-bg-secondary">Anulado</span>{{else}}Q {{monto}}{{/if}}</td>
+          <td class="small">{{usuario_nombre}}</td>
+          <td class="text-end">
+            {{#if anulado}}<span class="small">{{motivo_anulacion}}</span>
+            {{else}}{{#if (puede 'finanzas:anular')}}
+              <details><summary class="small text-danger">Anular</summary>
+                <form class="d-flex gap-1 mt-1" action="/finanzas/gastos/{{id_gasto}}/anular" method="POST" onsubmit="return confirm('¿Anular este gasto?');">
+                  <input type="text" class="form-control form-control-sm" name="motivo" required minlength="10" maxlength="255" placeholder="Motivo">
+                  <button class="btn btn-sm btn-outline-danger">Anular</button>
+                </form>
+              </details>
+            {{/if}}{{/if}}
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-center text-muted py-3">No hay gastos en este período.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

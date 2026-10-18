@@ -1,0 +1,149 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Nueva consulta</h2>
+    <div class="text-muted">{{interno.nombre_completo}} · DPI {{interno.dpi}} · {{interno.edad}} años ·
+      {{#if (eq interno.sexo 'M')}}Masculino{{else}}Femenino{{/if}}</div>
+  </div>
+  <a href="/consultas" class="btn btn-outline-secondary">Volver</a>
+</div>
+
+{{#if mensaje}}
+  <div class="alert alert-danger">{{mensaje}}</div>
+{{/if}}
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Padecimientos vigentes</div>
+      <ul class="list-group list-group-flush small">
+        {{#each padecimientos}}
+          <li class="list-group-item"><strong>{{nombre_padecimiento}}</strong>
+            {{#if medicamento_cajon}}<div class="text-muted">Cajón: {{medicamento_cajon}} {{dosis}}</div>{{/if}}</li>
+        {{else}}
+          <li class="list-group-item text-muted">Sin padecimientos registrados.</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Consultas anteriores</div>
+      <ul class="list-group list-group-flush small">
+        {{#each consultasPrevias}}
+          <li class="list-group-item {{#if anulada}}text-muted{{/if}}">
+            <a href="/consultas/{{id_consulta}}">{{fecha_texto}}</a> · {{diagnostico}}
+            {{#if anulada}}<span class="badge text-bg-secondary">Anulada</span>{{/if}}
+          </li>
+        {{else}}
+          <li class="list-group-item text-muted">Primera consulta registrada.</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">Visitas de especialistas</div>
+      <ul class="list-group list-group-flush small">
+        {{#each visitas}}
+          <li class="list-group-item">{{fecha_texto}} · {{especialidad}} · {{diagnostico}}</li>
+        {{else}}
+          <li class="list-group-item text-muted">Sin visitas de especialistas.</li>
+        {{/each}}
+      </ul>
+    </div>
+  </div>
+</div>
+
+<form action="/consultas/nueva/{{interno.id_interno}}" method="POST">
+  <div class="card mb-3">
+    <div class="card-header">Evaluación</div>
+    <div class="card-body row g-3">
+      <div class="col-12">
+        <label for="motivo" class="form-label">Motivo de la consulta *</label>
+        <textarea class="form-control" id="motivo" name="motivo" rows="2" required minlength="3" maxlength="2000"
+                  placeholder="Ej. FIEBRE DESDE ANOCHE / SUFRIÓ UNA CAÍDA EN EL BAÑO">{{consultaForm.motivo}}</textarea>
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="temperatura" class="form-label">Temperatura (°C)</label>
+        <input type="number" class="form-control" id="temperatura" name="temperatura" min="30" max="45" step="0.1" value="{{consultaForm.temperatura}}">
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="presion" class="form-label">Presión arterial</label>
+        <input type="text" class="form-control" id="presion" name="presion" maxlength="7" placeholder="120/80" value="{{consultaForm.presion}}">
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="pulso" class="form-label">Pulso (lpm)</label>
+        <input type="number" class="form-control" id="pulso" name="pulso" min="20" max="250" step="1" value="{{consultaForm.pulso}}">
+      </div>
+      <div class="col-6 col-md-3">
+        <label for="saturacion" class="form-label">Saturación O₂ (%)</label>
+        <input type="number" class="form-control" id="saturacion" name="saturacion" min="50" max="100" step="1" value="{{consultaForm.saturacion}}">
+      </div>
+      <div class="col-12">
+        <label for="hallazgos" class="form-label">Hallazgos del examen físico</label>
+        <textarea class="form-control" id="hallazgos" name="hallazgos" rows="2" maxlength="2000">{{consultaForm.hallazgos}}</textarea>
+      </div>
+      <div class="col-12">
+        <label for="diagnostico" class="form-label">Diagnóstico *</label>
+        <textarea class="form-control" id="diagnostico" name="diagnostico" rows="2" required minlength="3" maxlength="2000">{{consultaForm.diagnostico}}</textarea>
+      </div>
+      <div class="col-12">
+        <label for="indicaciones" class="form-label">Indicaciones (reposo, dieta, cuidados de enfermería...)</label>
+        <textarea class="form-control" id="indicaciones" name="indicaciones" rows="2" maxlength="2000">{{consultaForm.indicaciones}}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>Receta <span class="small text-muted">· escribe y elige el medicamento del catálogo (verás cuánto hay disponible)</span></span>
+      <button type="button" class="btn btn-sm btn-outline-primary" data-agregar="recetas" data-plantilla="plantilla-receta">+ Agregar medicamento</button>
+    </div>
+    <div class="card-body" id="recetas">
+      {{#each filas}}
+        <div class="row g-2 mb-2 fila-dinamica">
+          <div class="col-12 col-md-5 ac-grupo">
+            <input type="search" class="form-control {{#if id_medicamento}}is-valid{{/if}}" autocomplete="off" value="{{etiqueta}}"
+                   placeholder="Busca el medicamento…" data-autocompletar="/buscar/medicamentos" data-modo="elegir">
+            <input type="hidden" class="ac-valor" name="receta_medicamento[]" value="{{id_medicamento}}">
+          </div>
+          <div class="col-4 col-md-2">
+            <input type="number" class="form-control" name="receta_cantidad[]" min="1" max="999" step="1" placeholder="Cantidad" value="{{cantidadTexto}}">
+          </div>
+          <div class="col-8 col-md-3">
+            <input type="text" class="form-control" name="receta_indicaciones[]" maxlength="100" placeholder="Ej. 1 CADA 8 HORAS POR 3 DÍAS" value="{{indicaciones}}">
+          </div>
+          <div class="col-12 col-md-2"><button type="button" class="btn btn-outline-danger w-100 quitar-fila">Quitar</button></div>
+        </div>
+      {{/each}}
+      {{#unless catalogo}}
+        <p class="text-muted small mb-0">El catálogo de farmacia está vacío: pide a farmacia que registre los medicamentos.</p>
+      {{/unless}}
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-success">Guardar consulta</button>
+  <p class="text-muted small mt-2">
+    La consulta no tiene costo; solo se cobra lo que despache farmacia. Después de guardar podrás registrar un
+    padecimiento crónico o derivar al interno a un especialista.
+  </p>
+</form>
+
+<template id="plantilla-receta">
+  <div class="row g-2 mb-2 fila-dinamica">
+    <div class="col-12 col-md-5 ac-grupo">
+      <input type="search" class="form-control" autocomplete="off"
+             placeholder="Busca el medicamento…" data-autocompletar="/buscar/medicamentos" data-modo="elegir">
+      <input type="hidden" class="ac-valor" name="receta_medicamento[]" value="">
+    </div>
+    <div class="col-4 col-md-2">
+      <input type="number" class="form-control" name="receta_cantidad[]" min="1" max="999" step="1" placeholder="Cantidad">
+    </div>
+    <div class="col-8 col-md-3">
+      <input type="text" class="form-control" name="receta_indicaciones[]" maxlength="100" placeholder="Ej. 1 CADA 8 HORAS POR 3 DÍAS">
+    </div>
+    <div class="col-12 col-md-2"><button type="button" class="btn btn-outline-danger w-100 quitar-fila">Quitar</button></div>
+  </div>
+</template>
+
+<script src="/js/visita-formulario.js"></script>

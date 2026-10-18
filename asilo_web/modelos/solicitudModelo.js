@@ -79,11 +79,11 @@ async function buscarPorId(id, idEnfermero) {
 async function crear(datos) {
   const sql = `
     INSERT INTO tbl_solicitudes_referencia
-      (id_interno, id_medico_general, especialidad_requerida, es_externa, evaluacion_inicial)
-    VALUES (?, ?, ?, ?, ?)
+      (id_interno, id_medico_general, id_consulta, especialidad_requerida, es_externa, evaluacion_inicial)
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
   const [resultado] = await pool.query(sql, [
-    datos.id_interno, datos.id_medico_general, datos.especialidad_requerida,
+    datos.id_interno, datos.id_medico_general, datos.id_consulta || null, datos.especialidad_requerida,
     datos.es_externa, datos.evaluacion_inicial
   ]);
   return resultado.insertId;

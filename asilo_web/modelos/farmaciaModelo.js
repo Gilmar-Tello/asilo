@@ -18,7 +18,10 @@ async function cola(busqueda) {
            TIMESTAMPDIFF(YEAR, i.fecha_nacimiento, CURDATE()) AS edad,
            (SELECT COUNT(*) FROM tbl_recetas_visita r
               JOIN tbl_visitas_medicas v ON v.id_visita = r.id_visita AND v.estado = 'Registrada'
-             WHERE v.id_interno = i.id_interno AND r.cantidad_despachada < r.cantidad) AS recetas_pendientes,
+             WHERE v.id_interno = i.id_interno AND r.cantidad_despachada < r.cantidad)
+           + (SELECT COUNT(*) FROM tbl_recetas_consulta rc
+                JOIN tbl_consultas_generales c ON c.id_consulta = rc.id_consulta AND c.anulada = 0
+               WHERE c.id_interno = i.id_interno AND rc.cantidad_despachada < rc.cantidad) AS recetas_pendientes,
            (SELECT COUNT(*) FROM tbl_psicopatologias p
              WHERE p.id_interno = i.id_interno AND p.anulada = 0
                AND p.medicamento_cajon IS NOT NULL AND p.medicamento_cajon <> '') AS medicamentos_cajon
@@ -62,6 +65,26 @@ async function recetasPendientes(idInterno) {
        JOIN tbl_usuarios u ON u.id_usuario = v.id_especialista
       WHERE v.id_interno = ? AND r.cantidad_despachada < r.cantidad
       ORDER BY v.fecha_visita, r.id_receta`,
+    [idInterno]
+  );
+  return filas;
+}
+
+// Recetas del médico general (consultas vigentes) con algo por despachar.
+// El medicamento ya viene elegido del catálogo por el médico.
+async function recetasConsultaPendientes(idInterno) {
+  const [filas] = await pool.query(
+    `SELECT rc.id_receta_consulta, rc.id_consulta, rc.id_medicamento, rc.cantidad, rc.indicaciones,
+            rc.cantidad_despachada, rc.cantidad - rc.cantidad_despachada AS pendiente, rc.sin_existencia,
+            m.nombre, m.presentacion, m.precio,
+            DATE_FORMAT(c.fecha, '%d/%m/%Y') AS fecha_consulta_texto,
+            CONCAT_WS(' ', u.nombre1, u.apellido1) AS medico_nombre
+       FROM tbl_recetas_consulta rc
+       JOIN tbl_consultas_generales c ON c.id_consulta = rc.id_consulta AND c.anulada = 0
+       JOIN tbl_medicamentos m ON m.id_medicamento = rc.id_medicamento
+       JOIN tbl_usuarios u ON u.id_usuario = c.id_medico
+      WHERE c.id_interno = ? AND rc.cantidad_despachada < rc.cantidad
+      ORDER BY c.fecha, rc.id_receta_consulta`,
     [idInterno]
   );
   return filas;
@@ -134,7 +157,7 @@ async function explicarReceta(conexion, idReceta) {
 //   - marca las recetas "sin existencia" (FA-02)
 // lineas: [{ tipo: 'receta'|'cajon', id_origen, id_medicamento, cantidad }]
 // Devuelve { idDespacho (o null si solo se marcó sin existencia), visitas: [ids afectados] }
-async function despachar({ idInterno, idFarmaceutico, lineas, sinExistencia }) {
+async function despachar({ idInterno, idFarmaceutico, lineas, sinExistencia, sinExistenciaConsulta }) {
   const conexion = await pool.getConnection();
 
   try {
@@ -207,9 +230,25 @@ async function despachar({ idInterno, idFarmaceutico, lineas, sinExistencia }) {
       );
 
       let idReceta = null;
+      let idRecetaConsulta = null;
       let idPsicopatologia = null;
 
-      if (linea.tipo === 'receta') {
+      if (linea.tipo === 'consulta') {
+        // Receta del médico general: se entrega exactamente el medicamento que él eligió, sin pasarse (RN11)
+        const [rec] = await conexion.query(
+          `UPDATE tbl_recetas_consulta rc
+             JOIN tbl_consultas_generales c ON c.id_consulta = rc.id_consulta
+              SET rc.cantidad_despachada = rc.cantidad_despachada + ?, rc.sin_existencia = 0
+            WHERE rc.id_receta_consulta = ? AND c.id_interno = ? AND c.anulada = 0
+              AND rc.id_medicamento = ? AND rc.cantidad_despachada + ? <= rc.cantidad`,
+          [linea.cantidad, linea.id_origen, idInterno, med.id_medicamento, linea.cantidad]
+        );
+
+        if (rec.affectedRows === 0) {
+          throw new ErrorDespacho(`La receta del médico general de ${med.nombre} ya no admite esa cantidad (ya se despachó o la consulta se anuló).`);
+        }
+        idRecetaConsulta = linea.id_origen;
+      } else if (linea.tipo === 'receta') {
         const [rec] = await conexion.query(
           `UPDATE tbl_recetas_visita r
              JOIN tbl_visitas_medicas v ON v.id_visita = r.id_visita
@@ -245,9 +284,9 @@ async function despachar({ idInterno, idFarmaceutico, lineas, sinExistencia }) {
 
       await conexion.query(
         `INSERT INTO tbl_medicamentos_despachados
-           (id_despacho, id_medicamento, id_receta, id_psicopatologia, cantidad, precio_unitario, subtotal)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [idDespacho, med.id_medicamento, idReceta, idPsicopatologia, linea.cantidad, med.precio, subtotal]
+           (id_despacho, id_medicamento, id_receta, id_receta_consulta, id_psicopatologia, cantidad, precio_unitario, subtotal)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [idDespacho, med.id_medicamento, idReceta, idRecetaConsulta, idPsicopatologia, linea.cantidad, med.precio, subtotal]
       );
 
       // Un movimiento por cada lote del que salió: así se sabe qué lote recibió cada interno
@@ -278,6 +317,18 @@ async function despachar({ idInterno, idFarmaceutico, lineas, sinExistencia }) {
           WHERE r.id_receta IN (?) AND v.id_interno = ? AND v.estado = 'Registrada'
             AND r.cantidad_despachada < r.cantidad`,
         [sinExistencia, idInterno]
+      );
+    }
+
+    // FA-02 también para las recetas del médico general
+    if (sinExistenciaConsulta && sinExistenciaConsulta.length > 0) {
+      await conexion.query(
+        `UPDATE tbl_recetas_consulta rc
+           JOIN tbl_consultas_generales c ON c.id_consulta = rc.id_consulta
+            SET rc.sin_existencia = 1
+          WHERE rc.id_receta_consulta IN (?) AND c.id_interno = ? AND c.anulada = 0
+            AND rc.cantidad_despachada < rc.cantidad`,
+        [sinExistenciaConsulta, idInterno]
       );
     }
 
@@ -330,10 +381,12 @@ async function buscarDespacho(id) {
     `SELECT dd.cantidad, dd.precio_unitario, dd.subtotal,
             m.nombre, m.presentacion,
             dd.id_receta, r.id_visita, r.medicamento AS recetado,
+            dd.id_receta_consulta, rc.id_consulta,
             dd.id_psicopatologia, p.nombre_padecimiento
        FROM tbl_medicamentos_despachados dd
        JOIN tbl_medicamentos m ON m.id_medicamento = dd.id_medicamento
        LEFT JOIN tbl_recetas_visita r ON r.id_receta = dd.id_receta
+       LEFT JOIN tbl_recetas_consulta rc ON rc.id_receta_consulta = dd.id_receta_consulta
        LEFT JOIN tbl_psicopatologias p ON p.id_psicopatologia = dd.id_psicopatologia
       WHERE dd.id_despacho = ?
       ORDER BY dd.id_detalle`,
@@ -369,6 +422,6 @@ async function listarDespachos(busqueda) {
 }
 
 module.exports = {
-  ErrorDespacho, cola, buscarInterno, recetasPendientes, recetasDespachadas, medicamentosCajon,
+  ErrorDespacho, cola, buscarInterno, recetasPendientes, recetasConsultaPendientes, recetasDespachadas, medicamentosCajon,
   despachar, buscarDespacho, listarDespachos
 };

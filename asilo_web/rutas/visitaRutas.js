@@ -11,6 +11,10 @@ router.post('/atender/:idSolicitud', requiereLogin, requierePermiso('visitas:ate
 
 router.get('/', requiereLogin, requierePermiso('visitas:ver'), visitaControlador.listar);
 
+// Seguimiento y cierre de una visita en curso (el controlador comprueba que sea del especialista)
+router.post('/:id/seguimiento', requiereLogin, requierePermiso('visitas:atender'), visitaControlador.agregarSeguimiento);
+router.post('/:id/cerrar',      requiereLogin, requierePermiso('visitas:atender'), visitaControlador.cerrar);
+
 // El controlador decide: la ve su especialista o quien tenga visitas:ver
 router.get('/:id', requiereLogin, requierePermiso('visitas:ver', 'visitas:atender'), visitaControlador.detalle);
 

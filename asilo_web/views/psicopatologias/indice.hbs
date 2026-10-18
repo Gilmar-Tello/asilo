@@ -9,7 +9,8 @@
 
 <form class="row g-2 mb-4" action="/padecimientos" method="GET">
   <div class="col-12 col-md-6">
-    <input type="text" name="busqueda" class="form-control"
+    <input type="search" name="busqueda" class="form-control" autocomplete="off"
+           data-autocompletar="/buscar/internos?todos=1" data-modo="ir" data-ir="/padecimientos/interno/{id}"
            placeholder="Buscar por nombre o DPI" value="{{busqueda}}">
   </div>
   <div class="col-auto">

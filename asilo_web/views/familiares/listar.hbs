@@ -11,7 +11,8 @@
 
 <form class="row g-2 mb-4" action="/familiares" method="GET">
   <div class="col-12 col-md-6">
-    <input type="text" name="busqueda" class="form-control"
+    <input type="search" name="busqueda" class="form-control" autocomplete="off"
+           data-autocompletar="/buscar/familiares" data-modo="enviar"
            placeholder="Buscar por nombre, DPI o correo"
            value="{{busqueda}}">
   </div>

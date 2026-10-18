@@ -41,7 +41,8 @@
             <td>{{nombre}} {{presentacion}}</td>
             <td class="small">
               {{#if id_receta}}Receta de la visita #{{id_visita}}{{#if recetado}} ({{recetado}}){{/if}}
-              {{else}}Cajón · {{nombre_padecimiento}}{{/if}}
+              {{else}}{{#if id_receta_consulta}}Receta de la consulta #{{id_consulta}} (médico general)
+              {{else}}Cajón · {{nombre_padecimiento}}{{/if}}{{/if}}
             </td>
             <td class="text-end">{{cantidad}}</td>
             <td class="text-end">Q {{precio_unitario}}</td>
@@ -55,7 +56,7 @@
     </table>
     <p class="small text-muted mt-2 mb-0">
       Lo despachado por receta se cargó a la cuenta de su visita médica, donde se aplica el 20% de descuento de la Fundación.
-      Lo de cajón queda registrado para Facturación.
+      Lo de cajón y lo recetado por el médico general queda registrado para Facturación.
     </p>
   </div>
 </div>

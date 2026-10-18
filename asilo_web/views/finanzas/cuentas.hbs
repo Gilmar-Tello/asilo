@@ -1,0 +1,45 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Cuentas de familiares</h2>
+    <div class="text-muted">Lo que cada familiar responsable debe al asilo: cuotas mensuales y cargos médicos</div>
+  </div>
+  <div class="text-end">
+    <div class="small text-muted">Total por cobrar</div>
+    <div class="fs-4 fw-bold">Q {{totalPorCobrar}}</div>
+  </div>
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+<form class="row g-2 mb-3" action="/finanzas/cuentas" method="GET">
+  <div class="col-12 col-md-6">
+    <input type="search" class="form-control" name="q" value="{{busqueda}}" autocomplete="off" maxlength="100"
+           placeholder="Buscar familiar por nombre o DPI" data-autocompletar="/buscar/familiares" data-modo="enviar">
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-outline-primary">Buscar</button>
+    {{#if busqueda}}<a href="/finanzas/cuentas" class="btn btn-link">Limpiar</a>{{/if}}
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead class="table-light">
+      <tr><th>Familiar responsable</th><th>DPI</th><th>Teléfono</th><th class="text-end">Cargos pendientes</th><th class="text-end">Saldo</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{#each lista}}
+        <tr>
+          <td>{{nombre_completo}} {{#unless (eq estado 1)}}<span class="badge text-bg-secondary">Inactivo</span>{{/unless}}</td>
+          <td>{{dpi}}</td>
+          <td>{{telefono}}</td>
+          <td class="text-end">{{#if pendientes}}<span class="badge text-bg-warning">{{pendientes}}</span>{{else}}—{{/if}}</td>
+          <td class="text-end fw-bold">Q {{saldo_pendiente}}</td>
+          <td class="text-end"><a href="/finanzas/cuentas/{{id_familiar}}" class="btn btn-sm btn-outline-primary">Estado de cuenta</a></td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-center text-muted py-4">No hay familiares.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

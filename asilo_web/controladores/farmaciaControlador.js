@@ -30,13 +30,37 @@ function sugerir(recetado, catalogo) {
 
 // Arma las filas del "carrito": primero las recetas pendientes, después los medicamentos de cajón.
 // 'previo' son los valores que el usuario ya había puesto (cuando se vuelve a mostrar por un error).
-function armarFilas(recetas, cajon, catalogo, previo) {
+function armarFilas(recetas, recetasConsulta, cajon, catalogo, previo) {
   const filas = [];
 
   const opcionesPara = (idElegido) => catalogo.map((m) => ({
     ...m,
     elegido: m.id_medicamento === idElegido
   }));
+
+  // Recetas del médico general: el medicamento ya lo eligió él del catálogo (la lista trae solo ese)
+  for (const r of recetasConsulta) {
+    const clave = `consulta-${r.id_receta_consulta}`;
+    const antes = previo[clave];
+    const delCatalogo = catalogo.find((m) => m.id_medicamento === r.id_medicamento);
+    const disponible = delCatalogo ? delCatalogo.existencia : 0;
+
+    filas.push({
+      tipo: 'consulta',
+      id_origen: r.id_receta_consulta,
+      titulo: `${r.nombre} ${r.presentacion}`.trim(),
+      detalle: `${r.cantidad} recetado(s) · ${r.indicaciones} · consulta ${r.fecha_consulta_texto} · ${r.medico_nombre}`,
+      despachado: r.cantidad_despachada,
+      maximo: r.pendiente,
+      marcadoSinExistencia: antes ? antes.sin_existencia : false,
+      yaSinExistencia: r.sin_existencia === 1,
+      cantidad: antes ? antes.cantidad : Math.min(r.pendiente, disponible),
+      opciones: [{
+        id_medicamento: r.id_medicamento, nombre: r.nombre, presentacion: r.presentacion,
+        precio: r.precio, existencia: disponible, elegido: true
+      }]
+    });
+  }
 
   for (const r of recetas) {
     const clave = `receta-${r.id_receta}`;
@@ -78,7 +102,15 @@ function armarFilas(recetas, cajon, catalogo, previo) {
     });
   }
 
-  return filas.map((f, indice) => ({ ...f, indice }));
+  // Para el buscador de cada fila: el medicamento ya elegido (o sugerido) con su precio y lo disponible.
+  // Las recetas de visita y el cajón ya no mandan el catálogo entero al navegador (con cientos sería pesado).
+  return filas.map((f, indice) => {
+    const op = (f.opciones || []).find((o) => o.elegido);
+    const elegido = op
+      ? { id_medicamento: op.id_medicamento, etiqueta: `${op.nombre} ${op.presentacion}`.trim(), precio: op.precio, existencia: op.existencia }
+      : null;
+    return { ...f, indice, elegido, opciones: f.tipo === 'consulta' ? f.opciones : undefined };
+  });
 }
 
 // Lee las líneas que mandó el POS. Con extended:true pueden llegar como lista o como objeto
@@ -88,7 +120,7 @@ function leerLineas(body) {
   const entero = (v) => (/^\d+$/.test(String(v === undefined ? '' : v).trim()) ? parseInt(v, 10) : null);
 
   return crudas.slice(0, MAX_LINEAS).map((l) => ({
-    tipo: l && l.tipo === 'cajon' ? 'cajon' : 'receta',
+    tipo: l && ['cajon', 'consulta'].includes(l.tipo) ? l.tipo : 'receta',
     id_origen: entero(l && l.id_origen),
     id_medicamento: entero(l && l.id_medicamento),
     cantidad: entero(!l || l.cantidad === undefined || l.cantidad === '' ? '0' : l.cantidad),
@@ -97,8 +129,9 @@ function leerLineas(body) {
 }
 
 async function pintarPos(req, res, interno, mensaje, tipo, previo = {}) {
-  const [recetas, cajon, despachadas, catalogo] = await Promise.all([
+  const [recetas, recetasConsulta, cajon, despachadas, catalogo] = await Promise.all([
     farmaciaModelo.recetasPendientes(interno.id_interno),
+    farmaciaModelo.recetasConsultaPendientes(interno.id_interno),
     farmaciaModelo.medicamentosCajon(interno.id_interno),
     farmaciaModelo.recetasDespachadas(interno.id_interno),
     medicamentoModelo.listarActivos()
@@ -107,8 +140,9 @@ async function pintarPos(req, res, interno, mensaje, tipo, previo = {}) {
   res.render('farmacia/pos', {
     ...base(req, 'Farmacia'),
     interno,
-    filas: armarFilas(recetas, cajon, catalogo, previo),
+    filas: armarFilas(recetas, recetasConsulta, cajon, catalogo, previo),
     hayRecetas: recetas.length > 0,
+    hayRecetasConsulta: recetasConsulta.length > 0,
     despachadas,
     catalogoVacio: catalogo.length === 0,
     mensaje,
@@ -177,32 +211,40 @@ exports.despachar = async (req, res) => {
     const volver = (mensaje) => pintarPos(req, res, interno, mensaje, 'danger', previo);
 
     // Solo se aceptan recetas y cajones que de verdad son de este interno (el formulario se puede manipular)
-    const [recetas, cajon] = await Promise.all([
+    const [recetasVisita, recetasConsulta, cajon] = await Promise.all([
       farmaciaModelo.recetasPendientes(id),
+      farmaciaModelo.recetasConsultaPendientes(id),
       farmaciaModelo.medicamentosCajon(id)
     ]);
-    const recetasPorId = new Map(recetas.map((r) => [r.id_receta, r]));
+    const visitaPorId = new Map(recetasVisita.map((r) => [r.id_receta, r]));
+    const consultaPorId = new Map(recetasConsulta.map((r) => [r.id_receta_consulta, { ...r, medicamento: r.nombre }]));
     const cajonPorId = new Set(cajon.map((c) => c.id_psicopatologia));
 
     const aDespachar = [];
     const sinExistencia = [];
+    const sinExistenciaConsulta = [];
 
     for (const l of lineas) {
       if (l.id_origen === null || l.cantidad === null) {
         return volver('Hay una cantidad que no es un número entero.');
       }
 
-      const receta = l.tipo === 'receta' ? recetasPorId.get(l.id_origen) : null;
+      const receta = l.tipo === 'receta' ? visitaPorId.get(l.id_origen)
+        : (l.tipo === 'consulta' ? consultaPorId.get(l.id_origen) : null);
 
-      if (l.tipo === 'receta' && !receta) {
-        return volver('Una de las recetas ya no está pendiente (quizá otra persona la despachó). Revisa la lista.');
+      if (l.tipo !== 'cajon' && !receta) {
+        return volver('Una de las recetas ya no está pendiente (quizá otra persona la despachó o se anuló la consulta). Revisa la lista.');
       }
       if (l.tipo === 'cajon' && !cajonPorId.has(l.id_origen)) {
         return volver('Uno de los medicamentos de cajón ya no está vigente.');
       }
 
+      // La receta del médico general se entrega con el medicamento que él eligió (no se cambia aquí)
+      if (l.tipo === 'consulta') l.id_medicamento = receta.id_medicamento;
+
       if (l.cantidad === 0) {
-        if (l.sin_existencia && receta) sinExistencia.push(l.id_origen);   // FA-02
+        if (l.sin_existencia && l.tipo === 'receta') sinExistencia.push(l.id_origen);              // FA-02
+        if (l.sin_existencia && l.tipo === 'consulta') sinExistenciaConsulta.push(l.id_origen);
         continue;
       }
 
@@ -223,7 +265,7 @@ exports.despachar = async (req, res) => {
       aDespachar.push(l);
     }
 
-    if (aDespachar.length === 0 && sinExistencia.length === 0) {
+    if (aDespachar.length === 0 && sinExistencia.length === 0 && sinExistenciaConsulta.length === 0) {
       return volver('No hay nada que despachar: escribe una cantidad o marca un medicamento sin existencia.');
     }
 
@@ -233,7 +275,8 @@ exports.despachar = async (req, res) => {
         idInterno: id,
         idFarmaceutico: req.session.idUsuario,
         lineas: aDespachar,
-        sinExistencia
+        sinExistencia,
+        sinExistenciaConsulta
       });
     } catch (error) {
       if (error.deNegocio) return volver(error.message);

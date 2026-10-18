@@ -1,0 +1,90 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Facturación</h2>
+    <div class="text-muted">Servicios de la Fundación (ya con su 20% de descuento) que se cargan a la cuenta del familiar</div>
+  </div>
+  {{#if hayAlgo}}{{#if (puede 'finanzas:cobrar')}}
+    <form action="/finanzas/facturacion/todo" method="POST" onsubmit="return confirm('¿Facturar todo lo pendiente?');">
+      <button class="btn btn-success">Facturar todo</button>
+    </form>
+  {{/if}}{{/if}}
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+<h5>Visitas médicas listas para cobrar</h5>
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-light">
+      <tr><th>Fecha</th><th>Interno</th><th>Familiar</th><th>Especialidad</th><th class="text-end">Subtotal</th><th class="text-end">Descuento</th><th class="text-end">Total</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{#each visitas}}
+        <tr>
+          <td>{{fecha_texto}}</td>
+          <td>{{interno_nombre}}</td>
+          <td>{{familiar_nombre}}</td>
+          <td>{{especialidad}}</td>
+          <td class="text-end">Q {{subtotal}}</td>
+          <td class="text-end">- Q {{descuento}}</td>
+          <td class="text-end fw-bold">Q {{total}}</td>
+          <td class="text-end text-nowrap">
+            <a href="/visitas/{{id_visita}}" class="btn btn-sm btn-outline-secondary">Ver</a>
+            {{#if (puede 'finanzas:cobrar')}}
+              <form action="/finanzas/facturacion/visitas/{{id_visita}}" method="POST" class="d-inline">
+                <button class="btn btn-sm btn-success">Facturar</button>
+              </form>
+            {{/if}}
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="8" class="text-center text-muted py-3">No hay visitas por facturar.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<h5>Medicamentos de cajón y del médico general</h5>
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-light">
+      <tr><th>Despacho</th><th>Fecha</th><th>Interno</th><th>Familiar</th><th class="text-end">Monto (antes del 20%)</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{#each despachos}}
+        <tr>
+          <td>#{{id_despacho}}</td>
+          <td>{{fecha_texto}}</td>
+          <td>{{interno_nombre}}</td>
+          <td>{{familiar_nombre}}</td>
+          <td class="text-end">Q {{bruto}}</td>
+          <td class="text-end text-nowrap">
+            <a href="/farmacia/despachos/{{id_despacho}}" class="btn btn-sm btn-outline-secondary">Ver</a>
+            {{#if (puede 'finanzas:cobrar')}}
+              <form action="/finanzas/facturacion/despachos/{{id_despacho}}" method="POST" class="d-inline">
+                <button class="btn btn-sm btn-success">Facturar</button>
+              </form>
+            {{/if}}
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-center text-muted py-3">No hay despachos por facturar.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+<p class="small text-muted">Al facturar estos medicamentos, el microservicio de costos aplica el 20% de descuento de la Fundación.</p>
+
+{{#if enEspera}}
+  <h5 class="mt-4">Visitas que todavía no se pueden facturar</h5>
+  <ul class="list-group mb-3">
+    {{#each enEspera}}
+      <li class="list-group-item small">
+        <a href="/visitas/{{id_visita}}">Visita #{{id_visita}}</a> · {{fecha_texto}} · {{interno_nombre}} —
+        {{#unless cerrada}}el especialista aún no la cierra (puede tener exámenes o seguimientos pendientes){{/unless}}
+        {{#if (eq estado_costo 'Pendiente de cálculo')}}su costo está pendiente de cálculo{{/if}}
+      </li>
+    {{/each}}
+  </ul>
+  <p class="small text-muted">Solo se factura una visita con diagnóstico, costo calculado y cerrada (RN2). Si después de facturar cambia su total, el cargo del familiar se actualiza solo (RN9).</p>
+{{/if}}

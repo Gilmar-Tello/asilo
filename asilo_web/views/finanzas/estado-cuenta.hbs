@@ -1,0 +1,105 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Estado de cuenta</h2>
+    <div class="text-muted">{{familiar.nombre_completo}} · DPI {{familiar.dpi}} · {{familiar.telefono}} · {{familiar.correo_electronico}}</div>
+  </div>
+  <div class="text-end">
+    <div class="small text-muted">Saldo pendiente</div>
+    <div class="fs-3 fw-bold {{#if (eq familiar.saldo_pendiente '0.00')}}text-success{{else}}text-danger{{/if}}">Q {{familiar.saldo_pendiente}}</div>
+  </div>
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+<h5>Cargos</h5>
+<div class="table-responsive mb-4">
+  <table class="table align-middle">
+    <thead class="table-light">
+      <tr><th>Fecha</th><th>Concepto</th><th>Interno</th><th class="text-end">Monto</th><th class="text-end">Pagado</th><th class="text-end">Saldo</th><th>Estado</th></tr>
+    </thead>
+    <tbody>
+      {{#each cargos}}
+        <tr>
+          <td>{{fecha_texto}}</td>
+          <td>
+            {{descripcion}}
+            {{#if (eq tipo 'visita')}}<a href="/visitas/{{id_cargo}}" class="small ms-1">ver</a>{{/if}}
+            {{#if (eq tipo 'despacho')}}<a href="/farmacia/despachos/{{id_cargo}}" class="small ms-1">ver</a>{{/if}}
+          </td>
+          <td class="small">{{interno_nombre}}</td>
+          <td class="text-end">Q {{monto}}</td>
+          <td class="text-end">Q {{monto_pagado}}</td>
+          <td class="text-end fw-bold">Q {{saldo}}</td>
+          <td>{{#if pendiente}}<span class="badge text-bg-warning">Pendiente de Pago</span>{{else}}<span class="badge text-bg-success">Cancelada</span>{{/if}}</td>
+        </tr>
+        {{#if pendiente}}{{#if (puede 'finanzas:cobrar')}}
+          <tr class="table-light">
+            <td colspan="7">
+              <form class="row g-2 align-items-center" action="/finanzas/cuentas/{{../familiar.id_familiar}}/pagos" method="POST">
+                <input type="hidden" name="tipo" value="{{tipo}}">
+                <input type="hidden" name="id_cargo" value="{{id_cargo}}">
+                <div class="col-auto small text-muted">Registrar pago:</div>
+                <div class="col-6 col-md-2">
+                  <input type="number" class="form-control form-control-sm" name="monto" min="0.01" max="{{saldo}}" step="0.01" value="{{saldo}}" required>
+                </div>
+                <div class="col-6 col-md-2">
+                  <select name="forma_pago" class="form-select form-select-sm" required>
+                    {{#each ../formas}}<option value="{{this}}">{{this}}</option>{{/each}}
+                  </select>
+                </div>
+                <div class="col-8 col-md-3">
+                  <input type="text" class="form-control form-control-sm" name="referencia" maxlength="60" placeholder="No. de referencia (si no es efectivo)">
+                </div>
+                <div class="col-auto"><button class="btn btn-sm btn-success">Registrar pago</button></div>
+              </form>
+            </td>
+          </tr>
+        {{/if}}{{/if}}
+      {{else}}
+        <tr><td colspan="7" class="text-center text-muted py-4">Este familiar no tiene cargos.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+<p class="small text-muted">
+  Un cargo pasa a "Cancelada" solo cuando se paga completo; con un pago parcial sigue "Pendiente de Pago" (RN10).
+</p>
+
+<h5>Pagos recibidos</h5>
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead class="table-light">
+      <tr><th>Fecha</th><th>Aplicado a</th><th>Forma</th><th>Referencia</th><th class="text-end">Monto</th><th>Registró</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{#each pagos}}
+        <tr {{#if anulado}}class="text-muted"{{/if}}>
+          <td>{{fecha_texto}}</td>
+          <td class="small">{{#if id_cuota}}Cuota{{/if}}{{#if id_visita}}Visita #{{id_visita}}{{/if}}{{#if id_despacho}}Medicamentos #{{id_despacho}}{{/if}}</td>
+          <td>{{forma_pago}}</td>
+          <td>{{referencia}}</td>
+          <td class="text-end">{{#if anulado}}<s>Q {{monto}}</s> <span class="badge text-bg-secondary">Anulado</span>{{else}}Q {{monto}}{{/if}}</td>
+          <td class="small">{{usuario_nombre}}</td>
+          <td class="text-end">
+            {{#if anulado}}<span class="small">{{motivo_anulacion}}</span>
+            {{else}}{{#if (puede 'finanzas:anular')}}
+              <details>
+                <summary class="small text-danger">Anular</summary>
+                <form class="d-flex gap-1 mt-1" action="/finanzas/pagos/{{id_pago}}/anular" method="POST"
+                      onsubmit="return confirm('¿Anular este pago? Lo pagado volverá a deberse.');">
+                  <input type="hidden" name="id_familiar" value="{{../familiar.id_familiar}}">
+                  <input type="text" class="form-control form-control-sm" name="motivo" required minlength="10" maxlength="255" placeholder="Motivo">
+                  <button class="btn btn-sm btn-outline-danger">Anular</button>
+                </form>
+              </details>
+            {{/if}}{{/if}}
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="7" class="text-center text-muted">Sin pagos todavía.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>
+
+<a href="/finanzas/cuentas" class="btn btn-outline-secondary mt-2">Volver a las cuentas</a>

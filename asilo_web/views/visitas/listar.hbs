@@ -11,7 +11,8 @@
 
 <form class="row g-2 mb-3" action="/visitas" method="GET">
   <div class="col-12 col-md-6">
-    <input type="text" class="form-control" name="q" value="{{busqueda}}"
+    <input type="search" class="form-control" name="q" value="{{busqueda}}" autocomplete="off"
+           data-autocompletar="/buscar/internos" data-modo="enviar"
            placeholder="Buscar por nombre del interno o diagnóstico" maxlength="100">
   </div>
   <div class="col-auto">
@@ -39,7 +40,10 @@
           <td>{{fecha_texto}}</td>
           <td>{{interno_nombre}}</td>
           <td>{{especialista_nombre}}{{#if especialidad}}<div class="small text-muted">{{especialidad}}</div>{{/if}}</td>
-          <td><span class="badge {{clase_estado}}">{{estado}}</span></td>
+          <td>
+            <span class="badge {{clase_estado}}">{{estado}}</span>
+            {{#if (eq estado 'Registrada')}}{{#if cerrada}}<span class="badge text-bg-dark">Cerrada</span>{{else}}<span class="badge text-bg-info">En curso</span>{{/if}}{{/if}}
+          </td>
           <td><span class="badge {{clase_costo}}">{{estado_costo}}</span></td>
           <td class="text-end">{{#if total}}Q {{total}}{{else}}—{{/if}}</td>
           <td class="text-end">

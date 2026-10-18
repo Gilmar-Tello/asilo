@@ -30,6 +30,45 @@
         </tr>
       </thead>
       <tbody>
+        {{#if hayRecetasConsulta}}
+          <tr class="table-secondary"><td colspan="5" class="small fw-bold text-uppercase">Recetas del médico general</td></tr>
+          {{#each filas}}{{#if (eq tipo 'consulta')}}
+            <tr class="fila-pos" data-maximo="{{maximo}}">
+              <td>
+                <strong>{{titulo}}</strong> <span class="badge text-bg-light border">Médico general</span>
+                {{#if yaSinExistencia}}<span class="badge text-bg-danger">Marcado sin existencia</span>{{/if}}
+                <div class="small text-muted">{{detalle}}</div>
+                <div class="small">Despachado: {{despachado}} · <strong>Pendiente: {{maximo}}</strong></div>
+                <input type="hidden" name="lineas[{{indice}}][tipo]" value="consulta">
+                <input type="hidden" name="lineas[{{indice}}][id_origen]" value="{{id_origen}}">
+              </td>
+              <td>
+                {{!-- El médico ya eligió el medicamento del catálogo: no se cambia en farmacia --}}
+                <select name="lineas[{{indice}}][id_medicamento]" class="form-select form-select-sm med-select">
+                  {{#each opciones}}
+                    <option value="{{id_medicamento}}" data-precio="{{precio}}" data-existencia="{{existencia}}" selected>
+                      {{nombre}} {{presentacion}} · Q {{precio}} · hay {{existencia}}
+                    </option>
+                  {{/each}}
+                </select>
+                <div class="small text-danger aviso-existencia d-none">No hay existencia suficiente: despacha solo lo que hay.</div>
+              </td>
+              <td>
+                <input type="number" name="lineas[{{indice}}][cantidad]" class="form-control form-control-sm cantidad"
+                       min="0" max="{{maximo}}" step="1" value="{{cantidad}}">
+              </td>
+              <td>
+                <div class="form-check">
+                  <input class="form-check-input sin-existencia" type="checkbox" value="1" id="sin{{indice}}"
+                         name="lineas[{{indice}}][sin_existencia]" {{#if marcadoSinExistencia}}checked{{/if}}>
+                  <label class="form-check-label small" for="sin{{indice}}">Sin existencia</label>
+                </div>
+              </td>
+              <td class="text-end subtotal">Q 0.00</td>
+            </tr>
+          {{/if}}{{/each}}
+        {{/if}}
+
         <tr class="table-secondary"><td colspan="5" class="small fw-bold text-uppercase">Recetas de las visitas médicas</td></tr>
         {{#each filas}}{{#if (eq tipo 'receta')}}
           <tr class="fila-pos" data-maximo="{{maximo}}">
@@ -41,15 +80,13 @@
               <input type="hidden" name="lineas[{{indice}}][tipo]" value="receta">
               <input type="hidden" name="lineas[{{indice}}][id_origen]" value="{{id_origen}}">
             </td>
-            <td>
-              <select name="lineas[{{indice}}][id_medicamento]" class="form-select form-select-sm med-select">
-                <option value="" data-precio="0" data-existencia="0">— Elige del catálogo —</option>
-                {{#each opciones}}
-                  <option value="{{id_medicamento}}" data-precio="{{precio}}" data-existencia="{{existencia}}" {{#if elegido}}selected{{/if}}>
-                    {{nombre}} {{presentacion}} · Q {{precio}} · hay {{existencia}}
-                  </option>
-                {{/each}}
-              </select>
+            <td class="ac-grupo">
+              {{!-- Buscador: escribe y elige del catálogo (ver public/js/autocompletar.js) --}}
+              <input type="search" class="form-control form-control-sm {{#if elegido}}is-valid{{/if}}" autocomplete="off"
+                     value="{{elegido.etiqueta}}" placeholder="Busca el medicamento…"
+                     data-autocompletar="/buscar/medicamentos" data-modo="elegir">
+              <input type="hidden" class="ac-valor med-id" name="lineas[{{indice}}][id_medicamento]"
+                     value="{{elegido.id_medicamento}}" data-precio="{{elegido.precio}}" data-existencia="{{elegido.existencia}}">
               <div class="small text-danger aviso-existencia d-none">No hay existencia suficiente: despacha solo lo que hay.</div>
             </td>
             <td>
@@ -79,15 +116,13 @@
               <input type="hidden" name="lineas[{{indice}}][tipo]" value="cajon">
               <input type="hidden" name="lineas[{{indice}}][id_origen]" value="{{id_origen}}">
             </td>
-            <td>
-              <select name="lineas[{{indice}}][id_medicamento]" class="form-select form-select-sm med-select">
-                <option value="" data-precio="0" data-existencia="0">— Elige del catálogo —</option>
-                {{#each opciones}}
-                  <option value="{{id_medicamento}}" data-precio="{{precio}}" data-existencia="{{existencia}}" {{#if elegido}}selected{{/if}}>
-                    {{nombre}} {{presentacion}} · Q {{precio}} · hay {{existencia}}
-                  </option>
-                {{/each}}
-              </select>
+            <td class="ac-grupo">
+              {{!-- Buscador: escribe y elige del catálogo (ver public/js/autocompletar.js) --}}
+              <input type="search" class="form-control form-control-sm {{#if elegido}}is-valid{{/if}}" autocomplete="off"
+                     value="{{elegido.etiqueta}}" placeholder="Busca el medicamento…"
+                     data-autocompletar="/buscar/medicamentos" data-modo="elegir">
+              <input type="hidden" class="ac-valor med-id" name="lineas[{{indice}}][id_medicamento]"
+                     value="{{elegido.id_medicamento}}" data-precio="{{elegido.precio}}" data-existencia="{{elegido.existencia}}">
               <div class="small text-danger aviso-existencia d-none">No hay existencia suficiente.</div>
             </td>
             <td>

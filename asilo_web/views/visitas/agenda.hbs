@@ -49,6 +49,25 @@
   </table>
 </div>
 
+<h4 class="mt-4">Visitas en curso</h4>
+<p class="text-muted small mb-2">Pacientes ya atendidos que esperan resultados o seguimiento. Ciérralas cuando ya no necesiten nada.</p>
+<div class="list-group mb-4">
+  {{#each enCurso}}
+    <a href="/visitas/{{id_visita}}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+      <div>
+        <strong>{{interno_nombre}}</strong> <span class="small text-muted">· atendido el {{fecha_texto}}</span>
+        <div class="small">{{diagnostico}}</div>
+      </div>
+      <div class="text-end">
+        {{#if examenes_pendientes}}<span class="badge text-bg-warning">{{examenes_pendientes}} examen(es) esperando resultado</span>{{/if}}
+        {{#if examenes_con_resultado}}<span class="badge text-bg-success">{{examenes_con_resultado}} resultado(s) listo(s)</span>{{/if}}
+      </div>
+    </a>
+  {{else}}
+    <div class="list-group-item text-muted">No tienes visitas en curso.</div>
+  {{/each}}
+</div>
+
 <p class="text-muted small">
   Solo puedes registrar la visita de una cita programada a tu nombre. Al confirmarla, la solicitud queda como "Atendida".
 </p>

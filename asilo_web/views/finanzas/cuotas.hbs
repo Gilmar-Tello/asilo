@@ -1,0 +1,68 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Cuotas mensuales</h2>
+    <div class="text-muted">Una cuota por interno y por mes, a cargo de su familiar responsable (RN14)</div>
+  </div>
+  <form action="/finanzas/cuotas" method="GET" class="d-flex gap-2 align-items-center">
+    <label for="mes_ver" class="small text-muted">Mes</label>
+    <input type="month" id="mes_ver" name="mes" value="{{mes}}" class="form-control" onchange="this.form.submit()">
+  </form>
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+<form action="/finanzas/cuotas" method="POST">
+  <input type="hidden" name="mes" value="{{mes}}">
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 40px;">{{#if pendientesDeGenerar}}<input type="checkbox" class="form-check-input" id="todos" checked title="Marcar todos">{{/if}}</th>
+          <th>Interno</th><th>Familiar responsable</th><th style="width: 180px;">Cuota (Q)</th><th>Estado del mes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each filas}}
+          <tr>
+            <td>{{#unless generada}}<input type="checkbox" class="form-check-input marcar" name="incluir[]" value="{{id_interno}}" checked>{{/unless}}</td>
+            <td>{{interno_nombre}}</td>
+            <td>{{familiar_nombre}}</td>
+            <td>
+              {{#if generada}}Q {{monto_generado}}
+              {{else}}<input type="number" class="form-control form-control-sm" name="montos[{{id_interno}}]" min="0.01" step="0.01" value="{{propuesta}}" placeholder="0.00">{{/if}}
+            </td>
+            <td>
+              {{#if generada}}
+                {{#if (eq estado_cuota 'Cancelada')}}<span class="badge text-bg-success">Cancelada</span>{{else}}<span class="badge text-bg-warning">Pendiente de Pago</span>{{/if}}
+              {{else}}<span class="badge text-bg-light border">Sin generar</span>{{/if}}
+            </td>
+          </tr>
+        {{else}}
+          <tr><td colspan="5" class="text-center text-muted py-4">No hay internos activos.</td></tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+
+  {{#if pendientesDeGenerar}}
+    {{#if (puede 'finanzas:cobrar')}}
+      <button class="btn btn-success" onclick="return confirm('¿Generar las cuotas marcadas de {{mes}}? Se cargarán a la cuenta de cada familiar.');">
+        Generar cuotas de {{mes}}
+      </button>
+      <p class="small text-muted mt-2">La cuota que uses queda como la habitual del interno y se propondrá el mes siguiente. Una cuota ya generada no se duplica.</p>
+    {{/if}}
+  {{else}}
+    <p class="text-muted">Todas las cuotas de este mes ya están generadas. Los pagos se registran en <a href="/finanzas/cuentas">Cuentas de familiares</a>.</p>
+  {{/if}}
+</form>
+
+<script>
+  // "Marcar todos"
+  (function () {
+    var todos = document.getElementById('todos');
+    if (!todos) return;
+    todos.addEventListener('change', function () {
+      document.querySelectorAll('.marcar').forEach(function (c) { c.checked = todos.checked; });
+    });
+  })();
+</script>

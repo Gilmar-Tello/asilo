@@ -18,6 +18,14 @@
     </div>
   {{/if}}
 
+  {{#if consultaOrigen}}
+    <div class="alert alert-info">
+      Derivación desde la <a href="/consultas/{{consultaOrigen.id_consulta}}">consulta #{{consultaOrigen.id_consulta}}</a>
+      del {{consultaOrigen.fecha_texto}}. La evaluación ya viene escrita; puedes completarla.
+    </div>
+  {{/if}}
+  <input type="hidden" name="id_consulta" value="{{solicitudForm.id_consulta}}">
+
   <fieldset>
     <legend>Interno</legend>
 
