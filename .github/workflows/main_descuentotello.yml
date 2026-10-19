@@ -7,6 +7,12 @@ on:
   push:
     branches:
       - 'main'
+    # El microservicio vive en la raiz: solo se despliega si cambian SUS archivos
+    paths:
+      - 'index.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/main_descuentotello.yml'
   workflow_dispatch:
 
 jobs:
@@ -19,21 +25,24 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js version
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22.x'
 
-      - name: npm install, build, and test
+      # El microservicio esta en la raiz junto a asilo_web y fundacion_web:
+      # se arma una carpeta aparte con SOLO sus archivos y se instalan sus dependencias ahi
+      - name: Preparar paquete del microservicio
         run: |
-          npm install
-          npm run build --if-present
-          npm run test --if-present
+          mkdir paquete-descuento
+          cp index.js package.json package-lock.json paquete-descuento/
+          cd paquete-descuento
+          npm install --omit=dev
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: paquete-descuento
 
   deploy:
     runs-on: ubuntu-latest
