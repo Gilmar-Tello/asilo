@@ -35,7 +35,8 @@ app.post('/calcular-costo', (req, res) => {
     });
 });
 
-//abre el microservicio en el puerto 3000
-app.listen(3000, () => {
-    console.log('Microservicio de calcular costo corre en http://localhost:3000');
+//abre el microservicio: en Azure el puerto llega por la variable PORT; en tu PC usa el 3000
+const PUERTO = process.env.PORT || 3000;
+app.listen(PUERTO, () => {
+    console.log(`Microservicio de calcular costo corre en el puerto ${PUERTO}`);
 });

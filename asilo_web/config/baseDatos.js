@@ -6,6 +6,8 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: process.env.DB_PORT,
+  // Azure exige conexion cifrada; en tu PC (XAMPP) se deja DB_SSL sin definir
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: true } : undefined,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

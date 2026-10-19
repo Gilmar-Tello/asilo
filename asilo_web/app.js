@@ -5,6 +5,11 @@ const path = require('path');
 const { engine } = require('express-handlebars');
 const app = express();
 
+// Detras del proxy HTTPS de Azure, Express tiene que confiar en el para las cookies seguras
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
+
 //motor de vistas: Handlebars (.hbs)
 app.set('views', path.join(__dirname, 'views'));
 app.engine('.hbs', engine({
@@ -39,10 +44,20 @@ app.use(express.static('public'));
 
 const session = require('express-session');
 
+// El secreto de las sesiones sale del entorno (.env en tu PC, configuracion de la app en Azure); nunca se escribe en el codigo
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+    throw new Error('Falta SESSION_SECRET en produccion: agregalo en la configuracion de la aplicacion.');
+}
+
 app.use(session({
-    secret: 'asilo_cabeza_algodon_2026',
+    secret: process.env.SESSION_SECRET || 'solo-para-desarrollo',
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production'
+    }
 }));
 
 // En cada petición: carga los permisos del usuario (para el menú y para requierePermiso)
