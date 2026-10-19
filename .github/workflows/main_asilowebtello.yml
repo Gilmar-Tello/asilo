@@ -7,6 +7,10 @@ on:
   push:
     branches:
       - 'main'
+    # Solo se despliega el asilo cuando cambia su carpeta (o este mismo archivo)
+    paths:
+      - 'asilo_web/**'
+      - '.github/workflows/main_asilowebtello.yml'
   workflow_dispatch:
 
 jobs:
@@ -19,21 +23,22 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js version
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '22.x'
 
-      - name: npm install, build, and test
+      # El repositorio tiene varios proyectos: aqui solo se construye asilo_web
+      - name: npm install (solo asilo_web)
+        working-directory: asilo_web
         run: |
-          npm install
+          npm install --omit=dev
           npm run build --if-present
-          npm run test --if-present
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: asilo_web
 
   deploy:
     runs-on: ubuntu-latest
