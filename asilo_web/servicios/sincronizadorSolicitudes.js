@@ -1,6 +1,7 @@
 const fundacion = require('./fundacionClient');
 const solicitudModelo = require('../modelos/solicitudModelo');
 const psicopatologiaModelo = require('../modelos/psicopatologiaModelo');
+const notificador = require('./notificador');
 
 // Estados que puede devolver la Fundación. "Atendida" no está: lo pone el asilo al registrar la visita.
 const ESTADOS_DE_LA_FUNDACION = [
@@ -96,6 +97,25 @@ async function consultar(idSolicitud) {
     // Si cambió la fecha o ya no está agendada, el enfermero asignado deja de valer
     desasignar: cambioDeFecha || !sigueAgendada
   });
+
+  // RN5: la programación de la cita dispara el correo al familiar responsable.
+  // Solo cuando CAMBIA algo (recién programada o con otra fecha): consultar varias veces no repite el correo.
+  const yaEstabaAgendada = ['Programada', 'Reprogramada'].includes(solicitud.estado);
+  let evento = null;
+  if (sigueAgendada && fecha && !yaEstabaAgendada) evento = 'cita_programada';
+  else if (sigueAgendada && yaEstabaAgendada && cambioDeFecha) evento = 'cita_reprogramada';
+
+  if (evento) {
+    notificador.avisar(evento, {
+      idInterno: solicitud.id_interno,
+      valores: {
+        fecha_cita: notificador.fechaCitaLarga(fecha),
+        especialidad: notificador.nombrePropio(solicitud.especialidad_requerida),
+        especialista: respuesta.especialista && respuesta.especialista.nombre
+          ? notificador.nombrePropio(respuesta.especialista.nombre) : 'por confirmar'
+      }
+    });
+  }
 }
 
 // Avisa a la Fundación que la solicitud ya fue atendida (el especialista registró la visita).

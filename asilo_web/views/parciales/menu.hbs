@@ -94,12 +94,21 @@
         <li class="nav-item"><a class="nav-link" href="/finanzas/fundacion">Pagos a la Fundación</a></li>
       {{/if}}
 
-      {{!-- Reportes todavía no existe ni tiene permisos: por ahora solo lo ve el administrador. --}}
-      {{#if rolEsSistema}}
+      {{#if (puede 'reportes:ver')}}
         <li class="nav-item mt-3">
           <span class="text-uppercase small fw-bold text-secondary px-3">Reportes</span>
         </li>
-        <li class="nav-item"><a class="nav-link" href="#">Reportes del sistema</a></li>
+        <li class="nav-item"><a class="nav-link" href="/reportes">Reportes e informes</a></li>
+      {{/if}}
+
+      {{#if (puede 'correos:ver' 'correos:configurar')}}
+        <li class="nav-item mt-3">
+          <span class="text-uppercase small fw-bold text-secondary px-3">Notificaciones</span>
+        </li>
+        <li class="nav-item"><a class="nav-link" href="/correos">Correos a familiares</a></li>
+        {{#if (puede 'correos:configurar')}}
+          <li class="nav-item"><a class="nav-link" href="/correos/plantillas">Plantillas de correo</a></li>
+        {{/if}}
       {{/if}}
 
     </ul>

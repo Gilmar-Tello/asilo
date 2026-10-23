@@ -1,6 +1,7 @@
 const internoModelo = require('../modelos/internoModelo');
 const familiarModelo = require('../modelos/familiarModelo');
 const parentescoModelo = require('../modelos/parentescoModelo');
+const notificador = require('../servicios/notificador');
 
 // Mensajes fijos que viajan por la URL (?ok=... / ?error=...)
 const MENSAJES_OK = new Map([
@@ -262,15 +263,19 @@ exports.crear = async (req, res) => {
       return volver(errorPadecimientos);
     }
 
+    let idInterno;
     try {
       // El interno y sus padecimientos se guardan juntos (solo las filas con nombre)
-      await internoModelo.crearConPadecimientos(datos, padecimientos.filter((p) => p.nombre));
+      idInterno = await internoModelo.crearConPadecimientos(datos, padecimientos.filter((p) => p.nombre));
     } catch (err) {
       if (err.code === 'ER_DUP_ENTRY') {
         return volver('Ya existe un interno registrado con ese DPI.');
       }
       throw err;
     }
+
+    // Correo al responsable (no se espera: si Gmail tarda, el usuario no se queda esperando)
+    notificador.avisar('interno_ingreso', { idInterno });
 
     res.redirect('/internos?ok=creado');
   } catch (err) {
@@ -354,6 +359,15 @@ exports.actualizar = async (req, res) => {
       throw err;
     }
 
+    // Correos: si cambió el responsable, se avisa a los dos; si solo cambiaron datos, al responsable
+    if (datos.id_familiar !== encontrado.id_familiar) {
+      notificador.avisar('responsable_retirado', { idInterno: encontrado.id_interno, idFamiliar: encontrado.id_familiar });
+      notificador.avisar('responsable_asignado', { idInterno: encontrado.id_interno });
+    } else {
+      const cambioAlgo = Object.keys(datos).some((k) => String(datos[k] ?? '') !== String(encontrado[k] ?? ''));
+      if (cambioAlgo) notificador.avisar('interno_datos', { idInterno: encontrado.id_interno });
+    }
+
     res.redirect('/internos?ok=actualizado');
   } catch (err) {
     console.error(err);
@@ -382,6 +396,7 @@ exports.cambiarEstado = async (req, res) => {
     }
 
     await internoModelo.cambiarEstado(encontrado.id_interno, nuevoEstado);
+    notificador.avisar(nuevoEstado === 1 ? 'interno_activado' : 'interno_desactivado', { idInterno: encontrado.id_interno });
 
     res.redirect('/internos?ok=estado');
   } catch (err) {

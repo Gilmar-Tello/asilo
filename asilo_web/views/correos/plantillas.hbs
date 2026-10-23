@@ -1,0 +1,26 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">Plantillas de correo</h2>
+    <div class="text-muted">El texto de cada aviso automático al familiar responsable. Sin datos clínicos.</div>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="/correos">← Bitácora de correos</a>
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead class="table-light"><tr><th>Aviso</th><th>Asunto</th><th>Estado</th><th>Modificada</th><th></th></tr></thead>
+    <tbody>
+      {{#each lista}}
+        <tr {{#unless activa}}class="text-muted"{{/unless}}>
+          <td>{{nombre}}</td>
+          <td class="small">{{asunto}}</td>
+          <td>{{#if activa}}<span class="badge text-bg-success">Se envía</span>{{else}}<span class="badge text-bg-secondary">Apagada</span>{{/if}}</td>
+          <td class="small">{{modificada}}</td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="/correos/plantillas/{{id_plantilla}}">Editar</a></td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

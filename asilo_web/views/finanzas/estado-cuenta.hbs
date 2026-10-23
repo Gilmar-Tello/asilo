@@ -6,6 +6,11 @@
   <div class="text-end">
     <div class="small text-muted">Saldo pendiente</div>
     <div class="fs-3 fw-bold {{#if (eq familiar.saldo_pendiente '0.00')}}text-success{{else}}text-danger{{/if}}">Q {{familiar.saldo_pendiente}}</div>
+    {{#if (puede 'finanzas:cobrar')}}
+      <form action="/finanzas/cuentas/{{familiar.id_familiar}}/enviar" method="POST" onsubmit="return confirm('¿Enviar el estado de cuenta al correo del familiar?');">
+        <button class="btn btn-sm btn-outline-primary mt-1">✉ Enviar estado de cuenta por correo</button>
+      </form>
+    {{/if}}
   </div>
 </div>
 

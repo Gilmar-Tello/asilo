@@ -4,6 +4,7 @@ const psicopatologiaModelo = require('../modelos/psicopatologiaModelo');
 const consultaModelo = require('../modelos/consultaModelo');
 const fundacion = require('../servicios/fundacionClient');
 const sincronizador = require('../servicios/sincronizadorSolicitudes');
+const notificador = require('../servicios/notificador');
 const { texto, mayus, mayusParrafo } = require('../utilidades/texto');
 
 // Regla RN6: solo el Médico General crea solicitudes de referencia.
@@ -43,7 +44,10 @@ const MENSAJES = new Map([
   ['fundacion',   { tipo: 'danger',  texto: 'No se pudo comunicar con la Fundación. Se conserva la información anterior; intenta de nuevo más tarde.' }],
   ['no_publicada',{ tipo: 'warning', texto: 'La solicitud se guardó, pero la Fundación no está disponible: quedó pendiente de enviar. Se reintentará sola, o usa el botón "Enviar a la Fundación".' }],
   ['sin_cita',    { tipo: 'danger',  texto: 'Solo se puede asignar enfermero cuando la solicitud tiene una cita programada.' }],
-  ['enfermero_no_valido', { tipo: 'danger', texto: 'Ese enfermero no está disponible para esa cita.' }]
+  ['enfermero_no_valido', { tipo: 'danger', texto: 'Ese enfermero no está disponible para esa cita.' }],
+  // FE-01 (CU-01): la solicitud se guarda, pero el familiar no tiene correo -> el aviso queda pendiente en la bitácora
+  ['creada_sin_correo', { tipo: 'warning', texto: 'Solicitud creada y enviada a la Fundación. No se pudo notificar: familiar sin correo registrado (el aviso quedó pendiente).' }],
+  ['no_publicada_sin_correo', { tipo: 'warning', texto: 'La solicitud se guardó, pero la Fundación no está disponible: quedó pendiente de enviar. Además, no se pudo notificar: familiar sin correo registrado (el aviso quedó pendiente).' }]
 ]);
 
 // Datos que toda vista con layout necesita (título, usuario y rol de la sesión)
@@ -268,15 +272,22 @@ exports.crear = async (req, res) => {
       evaluacion_inicial: evaluacion
     });
 
+    // RN5: correo automático al familiar responsable. FE-01: si no tiene correo, se avisa en pantalla.
+    const correo = await notificador.notificar('solicitud_creada', {
+      idInterno: internoElegido.id_interno,
+      valores: { especialidad: notificador.nombrePropio(especialidad) }
+    });
+    const sinCorreo = correo && correo.sinCorreo ? '_sin_correo' : '';
+
     // Se envía a la Fundación. Si no responde, la solicitud ya quedó guardada.
     try {
       await sincronizador.publicar(idNueva);
     } catch (error) {
       console.error(`Solicitud ${idNueva} sin enviar:`, error.message);
-      return res.redirect(`/solicitudes/${idNueva}?msg=no_publicada`);
+      return res.redirect(`/solicitudes/${idNueva}?msg=no_publicada${sinCorreo}`);
     }
 
-    res.redirect(`/solicitudes/${idNueva}?msg=creada`);
+    res.redirect(`/solicitudes/${idNueva}?msg=creada${sinCorreo}`);
   } catch (error) {
     console.error(error);
     res.send('Error al crear la solicitud');

@@ -12,6 +12,7 @@ const anular = [requiereLogin, requierePermiso('finanzas:anular')];
 router.get('/cuentas', ver, f.cuentas);
 router.get('/cuentas/:id', ver, f.estadoCuenta);
 router.post('/cuentas/:id/pagos', cobrar, f.registrarPago);
+router.post('/cuentas/:id/enviar', cobrar, f.enviarEstadoCuenta);   // estado de cuenta por correo
 router.post('/pagos/:id/anular', anular, f.anularPago);
 
 // Cuotas mensuales

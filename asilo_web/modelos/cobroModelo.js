@@ -212,7 +212,7 @@ async function internosParaCuotas(mes) {
 }
 
 // Genera las cuotas del mes. items: [{ id_interno, monto }]. Las que ya existen se saltan (no se duplican).
-// Devuelve { creadas, existentes }
+// Devuelve { creadas, existentes, nuevas (ids) }
 async function generarCuotas(mes, items) {
   const conexion = await pool.getConnection();
   try {
@@ -220,6 +220,7 @@ async function generarCuotas(mes, items) {
 
     let creadas = 0;
     let existentes = 0;
+    const nuevas = [];   // ids de las cuotas creadas (para avisar a cada familiar)
     const familiares = new Set();
 
     for (const item of items) {
@@ -237,6 +238,7 @@ async function generarCuotas(mes, items) {
 
       if (r.affectedRows === 1) {
         creadas++;
+        nuevas.push(r.insertId);
         familiares.add(interno.id_familiar);
         // La cuota usada queda como la habitual del interno (se propondrá el mes siguiente)
         await conexion.query(`UPDATE tbl_internos SET cuota_mensual = ? WHERE id_interno = ?`, [item.monto, interno.id_interno]);
@@ -250,7 +252,7 @@ async function generarCuotas(mes, items) {
     }
 
     await conexion.commit();
-    return { creadas, existentes };
+    return { creadas, existentes, nuevas };
   } catch (error) {
     await conexion.rollback();
     throw error;
@@ -386,7 +388,47 @@ async function brutoDespacho(idDespacho) {
   return Number(r.bruto);
 }
 
+// ===== Datos para los correos al familiar =====
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+// Un cargo en palabras para el familiar: "Cuota mensual de octubre de 2026", "Visita médica del 06/10/2026"...
+async function detalleCargo(tipo, id) {
+  const consultas = {
+    cuota: `SELECT id_familiar, id_interno, monto, DATE_FORMAT(mes, '%Y-%m') AS clave FROM tbl_cuotas_mensuales WHERE id_cuota = ?`,
+    visita: `SELECT id_familiar_cobro AS id_familiar, id_interno, monto_facturado AS monto, DATE_FORMAT(fecha_visita, '%d/%m/%Y') AS clave FROM tbl_visitas_medicas WHERE id_visita = ?`,
+    despacho: `SELECT id_familiar_cobro AS id_familiar, id_interno, monto_facturado AS monto, DATE_FORMAT(fecha, '%d/%m/%Y') AS clave FROM tbl_despachos WHERE id_despacho = ?`
+  };
+  if (!consultas[tipo]) return null;
+  const [[c]] = await pool.query(consultas[tipo], [id]);
+  if (!c) return null;
+
+  let concepto;
+  if (tipo === 'cuota') {
+    const [anio, mes] = c.clave.split('-').map(Number);
+    concepto = `Cuota mensual de ${MESES[mes - 1]} de ${anio}`;
+  } else if (tipo === 'visita') {
+    concepto = `Visita médica del ${c.clave}`;   // sin especialidad ni diagnóstico: el correo no lleva datos clínicos
+  } else {
+    concepto = `Medicamentos despachados el ${c.clave}`;
+  }
+  return { id_familiar: c.id_familiar, id_interno: c.id_interno, monto: Number(c.monto), concepto };
+}
+
+// Un pago (aunque esté anulado) con el cargo al que se aplicó
+async function detallePago(idPago) {
+  const [[p]] = await pool.query(
+    `SELECT id_pago, id_familiar, id_cuota, id_visita, id_despacho, monto, forma_pago, referencia, motivo_anulacion
+       FROM tbl_pagos WHERE id_pago = ?`,
+    [idPago]
+  );
+  if (!p) return null;
+  const tipo = p.id_cuota ? 'cuota' : (p.id_visita ? 'visita' : 'despacho');
+  const cargo = await detalleCargo(tipo, p.id_cuota || p.id_visita || p.id_despacho);
+  return { ...p, monto: Number(p.monto), id_interno: cargo ? cargo.id_interno : null, concepto: cargo ? cargo.concepto : '' };
+}
+
 module.exports = {
+  detalleCargo, detallePago,
   ErrorCobro, recalcularSaldo, cuentas, buscarFamiliar, estadoCuenta, registrarPago, anularPago,
   internosParaCuotas, generarCuotas,
   visitasPorFacturar, visitasEnEspera, despachosPorFacturar, facturarVisita, facturarDespacho, brutoDespacho

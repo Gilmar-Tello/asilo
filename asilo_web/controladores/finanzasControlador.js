@@ -3,10 +3,55 @@ const cajaModelo = require('../modelos/cajaModelo');
 const calculadorCostos = require('../servicios/calculadorCostos');
 const { mayus } = require('../utilidades/texto');
 const { leerImporte, hoy, leerFecha, leerMes, mesActual } = require('../utilidades/dinero');
+const notificador = require('../servicios/notificador');
+const { dinero } = require('../servicios/exportadorReportes');
+
+// ===== Correos de la cuenta del familiar =====
+// Se mandan "en segundo plano": si Gmail tarda o falla, el cobro ya quedó registrado (y el correo en la bitácora).
+async function saldoTexto(idFamiliar) {
+  const f = await cobroModelo.buscarFamiliar(idFamiliar);
+  return dinero(f ? f.saldo_pendiente : 0);
+}
+
+// Nuevo cargo: cuota generada, visita o medicamentos facturados
+function avisarCargo(tipo, id) {
+  (async () => {
+    const c = await cobroModelo.detalleCargo(tipo, id);
+    if (!c || !c.id_familiar) return;
+    notificador.avisar('cargo_nuevo', {
+      idInterno: c.id_interno,
+      idFamiliar: c.id_familiar,   // el familiar al que se le cargó (aunque después cambie el responsable)
+      valores: { concepto: c.concepto, monto: dinero(c.monto), saldo: await saldoTexto(c.id_familiar) }
+    });
+  })().catch((e) => console.error('Aviso de cargo:', e.message));
+}
+
+// Pago registrado o anulado
+function avisarPago(evento, idPago) {
+  (async () => {
+    const p = await cobroModelo.detallePago(idPago);
+    if (!p) return;
+    notificador.avisar(evento, {
+      idInterno: p.id_interno,
+      idFamiliar: p.id_familiar,
+      valores: {
+        concepto: p.concepto,
+        monto: dinero(p.monto),
+        forma_pago: p.referencia ? `${p.forma_pago} (referencia ${p.referencia})` : p.forma_pago,
+        // El motivo se guardó en MAYÚSCULAS: en la carta va como oración ("Se registró dos veces")
+        motivo: String(p.motivo_anulacion || '').toLowerCase().replace(/^./, (l) => l.toUpperCase()),
+        saldo: await saldoTexto(p.id_familiar)
+      }
+    });
+  })().catch((e) => console.error('Aviso de pago:', e.message));
+}
 
 const MENSAJES = new Map([
   ['pago',          { tipo: 'success', texto: 'Pago registrado.' }],
   ['pago_anulado',  { tipo: 'success', texto: 'Pago anulado: lo pagado vuelve a deberse.' }],
+  ['estado_enviado',    { tipo: 'success', texto: 'Estado de cuenta enviado por correo. Puedes ver cómo va el envío en Notificaciones → Correos a familiares.' }],
+  ['estado_sin_correo', { tipo: 'warning', texto: 'No se pudo notificar: familiar sin correo registrado (el aviso quedó pendiente en la bitácora).' }],
+  ['estado_apagado',    { tipo: 'warning', texto: 'No se envió: la plantilla "Estado de cuenta" está apagada en Plantillas de correo.' }],
   ['facturada',     { tipo: 'success', texto: 'Facturado: el cargo ya está en la cuenta del familiar.' }],
   ['facturadas',    { tipo: 'success', texto: 'Se facturó todo lo pendiente.' }],
   ['no_facturable', { tipo: 'danger',  texto: 'Eso ya no se puede facturar (ya se facturó o cambió su estado).' }],
@@ -102,8 +147,9 @@ exports.registrarPago = async (req, res) => {
       return pintarEstadoCuenta(req, res, familiar, 'Para transferencia, depósito o cheque escribe el número de referencia.', 'danger');
     }
 
+    let idPago;
     try {
-      await cobroModelo.registrarPago({
+      idPago = await cobroModelo.registrarPago({
         idFamiliar: id, tipo: req.body.tipo, idCargo, monto, formaPago, referencia, idUsuario: req.session.idUsuario
       });
     } catch (error) {
@@ -111,10 +157,46 @@ exports.registrarPago = async (req, res) => {
       throw error;
     }
 
+    avisarPago('pago_registrado', idPago);   // comprobante por correo al familiar
+
     res.redirect(`/finanzas/cuentas/${id}?msg=pago`);
   } catch (error) {
     console.error(error);
     res.send('Error al registrar el pago');
+  }
+};
+
+// Envía al familiar su estado de cuenta por correo (cargos pendientes, saldo y últimos pagos)
+exports.enviarEstadoCuenta = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const familiar = Number.isNaN(id) ? null : await cobroModelo.buscarFamiliar(id);
+    if (!familiar) return res.redirect('/finanzas/cuentas?msg=no_existe');
+
+    const { cargos, pagos } = await cobroModelo.estadoCuenta(id);
+    // Conceptos sin datos clínicos (la descripción de pantalla lleva la especialidad)
+    const concepto = (c) => (c.tipo === 'cuota' ? `Cuota ${c.fecha_texto}` : (c.tipo === 'visita' ? `Visita médica del ${c.fecha_texto}` : `Medicamentos del ${c.fecha_texto}`));
+
+    const pendientes = cargos.filter((c) => c.estado === 'Pendiente de Pago');
+    const detalle = pendientes.length
+      ? pendientes.map((c) => `• ${concepto(c)} (${notificador.nombrePropio(c.interno_nombre)}): ${dinero(c.saldo)}`).join('\n')
+      : '• No tiene cargos pendientes. ¡Gracias por estar al día!';
+    const ultimos = pagos.filter((p) => !p.anulado).slice(0, 5);
+    const listaPagos = ultimos.length
+      ? ultimos.map((p) => `• ${p.fecha_texto.slice(0, 10)}: ${dinero(p.monto)} (${p.forma_pago})`).join('\n')
+      : '• Sin pagos registrados.';
+
+    const r = await notificador.notificar('estado_cuenta', {
+      idFamiliar: id,
+      valores: { detalle, pagos: listaPagos, saldo: dinero(familiar.saldo_pendiente) }
+    });
+
+    // Se redirige (no se pinta aquí): si se recarga la página, el correo no se manda otra vez
+    const msg = !r ? 'estado_apagado' : (r.sinCorreo ? 'estado_sin_correo' : 'estado_enviado');
+    res.redirect(`/finanzas/cuentas/${id}?msg=${msg}`);
+  } catch (error) {
+    console.error(error);
+    res.send('Error al enviar el estado de cuenta');
   }
 };
 
@@ -129,6 +211,7 @@ exports.anularPago = async (req, res) => {
     if (!motivo) return res.redirect(`${destino}?msg=motivo_corto`);
 
     const idFamiliar = await cobroModelo.anularPago(id, motivo);
+    if (idFamiliar) avisarPago('pago_anulado', id);
     res.redirect(idFamiliar ? `/finanzas/cuentas/${idFamiliar}?msg=pago_anulado` : `${destino}?msg=ya_anulado`);
   } catch (error) {
     console.error(error);
@@ -163,12 +246,13 @@ exports.generarCuotas = async (req, res) => {
     const mesTexto = mes.slice(0, 7);
 
     const incluir = new Set((Array.isArray(req.body.incluir) ? req.body.incluir : [req.body.incluir]).filter(Boolean).map(Number));
-    const montos = req.body.montos && typeof req.body.montos === 'object' ? req.body.montos : {};
+    // Cada monto llega como "monto_<id del interno>". (Con "montos[5]" el lector de formularios lo convertía
+    // en una LISTA y movía las posiciones: el monto del interno 1 terminaba en otro lugar.)
     const items = [];
     const errores = [];
 
     for (const idInterno of incluir) {
-      const monto = leerImporte(montos[idInterno]);
+      const monto = leerImporte(req.body[`monto_${idInterno}`]);
       if (monto === null) errores.push(idInterno);
       else items.push({ id_interno: idInterno, monto });
     }
@@ -180,7 +264,8 @@ exports.generarCuotas = async (req, res) => {
       return res.redirect(`/finanzas/cuotas?mes=${mesTexto}&msg=cuotas_error`);
     }
 
-    const { creadas, existentes } = await cobroModelo.generarCuotas(mes, items);
+    const { creadas, existentes, nuevas } = await cobroModelo.generarCuotas(mes, items);
+    for (const idCuota of nuevas) avisarCargo('cuota', idCuota);
     req.session.avisoCuotas = `Se generaron ${creadas} cuota(s)${existentes ? `; ${existentes} ya existían y no se duplicaron` : ''}.`;
     res.redirect(`/finanzas/cuotas?mes=${mesTexto}&msg=cuotas_ok`);
   } catch (error) {
@@ -225,6 +310,7 @@ exports.facturarVisita = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     const bien = Number.isNaN(id) ? false : await cobroModelo.facturarVisita(id);
+    if (bien) avisarCargo('visita', id);
     res.redirect(`/finanzas/facturacion?msg=${bien ? 'facturada' : 'no_facturable'}`);
   } catch (error) {
     console.error(error);
@@ -244,7 +330,9 @@ async function facturarUnDespacho(id) {
     return 'costos_caido';
   }
 
-  return (await cobroModelo.facturarDespacho(id, costos)) ? 'facturada' : 'no_facturable';
+  if (!(await cobroModelo.facturarDespacho(id, costos))) return 'no_facturable';
+  avisarCargo('despacho', id);
+  return 'facturada';
 }
 
 exports.facturarDespacho = async (req, res) => {
@@ -262,7 +350,9 @@ exports.facturarTodo = async (req, res) => {
   try {
     const [visitas, despachos] = await Promise.all([cobroModelo.visitasPorFacturar(), cobroModelo.despachosPorFacturar()]);
 
-    for (const v of visitas) await cobroModelo.facturarVisita(v.id_visita);
+    for (const v of visitas) {
+      if (await cobroModelo.facturarVisita(v.id_visita)) avisarCargo('visita', v.id_visita);
+    }
 
     for (const d of despachos) {
       const r = await facturarUnDespacho(d.id_despacho);

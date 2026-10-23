@@ -1,5 +1,6 @@
 const familiarModelo = require('../modelos/familiarModelo');
 const { mayus } = require('../utilidades/texto');
+const notificador = require('../servicios/notificador');
 
 // Mensajes fijos que viajan por la URL (?ok=... / ?error=...)
 const MENSAJES_OK = new Map([
@@ -165,6 +166,11 @@ exports.actualizar = async (req, res) => {
         return volver('Ya existe otro familiar con ese DPI.');
       }
       throw err;
+    }
+
+    // RN4: si ahora tiene correo, los avisos que quedaron "Sin correo" se envían de una vez
+    if (datos.correo_electronico !== encontrado.correo_electronico) {
+      notificador.reintentarPendientes().catch(() => {});
     }
 
     res.redirect('/familiares?ok=actualizado');

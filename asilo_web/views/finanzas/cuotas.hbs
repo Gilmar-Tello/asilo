@@ -29,7 +29,7 @@
             <td>{{familiar_nombre}}</td>
             <td>
               {{#if generada}}Q {{monto_generado}}
-              {{else}}<input type="number" class="form-control form-control-sm" name="montos[{{id_interno}}]" min="0.01" step="0.01" value="{{propuesta}}" placeholder="0.00">{{/if}}
+              {{else}}<input type="number" class="form-control form-control-sm" name="monto_{{id_interno}}" min="0.01" step="0.01" value="{{propuesta}}" placeholder="0.00">{{/if}}
             </td>
             <td>
               {{#if generada}}

@@ -1,0 +1,76 @@
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h2 class="mb-0">{{reporte.titulo}}</h2>
+    <div class="text-muted">{{reporte.descripcion}}</div>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="/reportes">← Todos los reportes</a>
+</div>
+
+{{!-- Un solo formulario: el botón que se presiona decide la salida (pantalla, PDF o Excel) --}}
+<form class="card card-body mb-3" action="/reportes/{{reporte.clave}}" method="GET">
+  <div class="row g-2 align-items-end">
+    {{#if conInterno}}
+      <div class="col-12 col-md-4 ac-grupo">
+        <label class="form-label small">Interno {{#if internoRequerido}}*{{else}}(vacío = todos){{/if}}</label>
+        <input type="search" class="form-control {{#if idInterno}}is-valid{{/if}}" autocomplete="off" value="{{nombreInterno}}"
+               placeholder="Escribe el nombre del interno…" data-autocompletar="/buscar/internos?todos=1" data-modo="elegir"
+               {{#if internoRequerido}}required{{/if}}>
+        <input type="hidden" class="ac-valor" name="interno" value="{{idInterno}}">
+      </div>
+    {{/if}}
+    <div class="col-6 col-md-2">
+      <label class="form-label small">Desde</label>
+      <input type="date" name="desde" class="form-control" value="{{desde}}" max="{{hoy}}">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small">Hasta</label>
+      <input type="date" name="hasta" class="form-control" value="{{hasta}}">
+    </div>
+    <div class="col-12 col-md d-flex gap-2 flex-wrap">
+      <button class="btn btn-primary" name="formato" value="pantalla">Ver en pantalla</button>
+      <button class="btn btn-outline-danger" name="formato" value="pdf">Descargar PDF</button>
+      <button class="btn btn-outline-success" name="formato" value="excel">Exportar a Excel</button>
+    </div>
+  </div>
+  <div class="form-text">Deja las dos fechas vacías para ver todas las fechas.</div>
+</form>
+
+{{#if aviso}}<div class="alert alert-info">{{aviso}}</div>{{/if}}
+
+{{#if generado}}
+  <div class="small text-muted mb-2">{{filtrosTexto}}</div>
+
+  <div class="row g-2 mb-3">
+    {{#each resumen}}
+      <div class="col-6 col-md">
+        <div class="card h-100"><div class="card-body py-2">
+          <div class="small text-muted">{{etiqueta}}</div>
+          <div class="fw-bold">{{texto}}</div>
+        </div></div>
+      </div>
+    {{/each}}
+  </div>
+
+  {{#each secciones}}
+    <h5 class="mt-4">{{titulo}}</h5>
+    <div class="table-responsive">
+      <table class="table table-sm table-striped align-middle">
+        <thead class="table-light">
+          <tr>{{#each encabezados}}<th {{#if derecha}}class="text-end"{{/if}}>{{titulo}}</th>{{/each}}</tr>
+        </thead>
+        <tbody>
+          {{#each celdas}}
+            <tr>{{#each this}}<td {{#if derecha}}class="text-end text-nowrap"{{/if}}>{{texto}}</td>{{/each}}</tr>
+          {{else}}
+            <tr><td colspan="{{numColumnas}}" class="text-center text-muted py-3">{{vacio}}</td></tr>
+          {{/each}}
+        </tbody>
+        {{#if pie}}
+          <tfoot class="table-group-divider">
+            <tr class="fw-bold">{{#each pie}}<td {{#if derecha}}class="text-end text-nowrap"{{/if}}>{{texto}}</td>{{/each}}</tr>
+          </tfoot>
+        {{/if}}
+      </table>
+    </div>
+  {{/each}}
+{{/if}}

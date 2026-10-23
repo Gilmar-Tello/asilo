@@ -1,0 +1,22 @@
+<div class="mb-3">
+  <h2 class="mb-0">Reportes e informes</h2>
+  <div class="text-muted">Elige un reporte, define los filtros y velo en pantalla, en PDF o en Excel.</div>
+</div>
+
+<div class="row g-3">
+  {{#each reportes}}
+    <div class="col-12 col-md-6 col-xl-4">
+      <a class="card h-100 text-decoration-none text-reset shadow-sm" href="/reportes/{{clave}}">
+        <div class="card-body">
+          <h5 class="card-title mb-1">{{titulo}}</h5>
+          <p class="card-text small text-muted mb-2">{{descripcion}}</p>
+          <div class="small">
+            {{#if (eq interno 'requerido')}}<span class="badge text-bg-warning">Pide un interno</span>{{/if}}
+            {{#if (eq interno 'opcional')}}<span class="badge text-bg-light border">Por interno o todos</span>{{/if}}
+            <span class="badge text-bg-light border">{{#if (eq rangoInicial 'todo')}}Todo el historial{{else}}Por rango de fechas{{/if}}</span>
+          </div>
+        </div>
+      </a>
+    </div>
+  {{/each}}
+</div>

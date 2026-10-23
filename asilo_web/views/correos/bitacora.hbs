@@ -1,0 +1,94 @@
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h2 class="mb-0">Correos a familiares</h2>
+    <div class="text-muted">Bitácora de los avisos automáticos al familiar responsable (CU-09)</div>
+  </div>
+  {{#if (puede 'correos:configurar')}}
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-primary btn-sm" href="/correos/plantillas">Plantillas de los mensajes</a>
+      <form action="/correos/reintentar" method="POST"><button class="btn btn-outline-secondary btn-sm">Reintentar pendientes</button></form>
+    </div>
+  {{/if}}
+</div>
+
+{{#if mensaje}}<div class="alert alert-{{tipo}}">{{mensaje}}</div>{{/if}}
+
+{{#if configurado}}
+  <div class="alert alert-light border small py-2">Los correos salen desde <strong>{{remitente}}</strong>.</div>
+{{else}}
+  <div class="alert alert-warning">
+    <strong>El envío de correos no está configurado.</strong> Los avisos se guardan como <em>Pendiente</em> y se enviarán solos
+    en cuanto se agreguen <code>SMTP_USER</code> y <code>SMTP_PASS</code> al archivo <code>.env</code>.
+  </div>
+{{/if}}
+
+{{#if (puede 'correos:configurar')}}
+  <details class="mb-3">
+    <summary class="small">Enviar un correo de prueba</summary>
+    <form class="d-flex gap-2 mt-2" action="/correos/probar" method="POST" style="max-width:520px">
+      <input type="email" name="destino" class="form-control form-control-sm" required maxlength="100" placeholder="tu-correo@gmail.com">
+      <button class="btn btn-sm btn-primary text-nowrap">Enviar prueba</button>
+    </form>
+  </details>
+{{/if}}
+
+{{!-- Contadores: también sirven de filtro rápido por estado --}}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a class="btn btn-sm {{#if filtros.estado}}btn-outline-secondary{{else}}btn-secondary{{/if}}" href="/correos">Todos</a>
+  {{#each conteo}}
+    <a class="btn btn-sm {{#if activo}}btn-secondary{{else}}btn-outline-secondary{{/if}}" href="/correos?estado={{estado}}">
+      {{estado}} <span class="badge text-bg-light">{{cantidad}}</span>
+    </a>
+  {{/each}}
+</div>
+
+<form class="row g-2 mb-3 align-items-end" action="/correos" method="GET">
+  <input type="hidden" name="estado" value="{{filtros.estado}}">
+  <div class="col-12 col-md-4">
+    <label class="form-label small">Buscar</label>
+    <input type="search" name="q" class="form-control" value="{{filtros.busqueda}}" maxlength="100" placeholder="Familiar, interno, correo o asunto">
+  </div>
+  <div class="col-6 col-md-2"><label class="form-label small">Desde</label><input type="date" name="desde" class="form-control" value="{{filtros.desde}}"></div>
+  <div class="col-6 col-md-2"><label class="form-label small">Hasta</label><input type="date" name="hasta" class="form-control" value="{{filtros.hasta}}"></div>
+  <div class="col-auto"><button class="btn btn-outline-primary">Filtrar</button></div>
+  <div class="col-auto"><a class="btn btn-link" href="/correos">Limpiar</a></div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle">
+    <thead class="table-light">
+      <tr><th>Fecha</th><th>Aviso</th><th>Para</th><th>Interno</th><th>Estado</th><th></th></tr>
+    </thead>
+    <tbody>
+      {{#each lista}}
+        <tr>
+          <td class="small text-nowrap">{{creado}}</td>
+          <td>
+            <div>{{evento_nombre}}</div>
+            <details><summary class="small text-muted">{{asunto}}</summary>
+              <pre class="small bg-light border rounded p-2 mt-1 mb-0" style="white-space:pre-wrap;font-family:inherit">{{cuerpo}}</pre>
+            </details>
+          </td>
+          <td class="small">{{familiar}}<br><span class="text-muted">{{#if destinatario}}{{destinatario}}{{else}}sin correo{{/if}}</span></td>
+          <td class="small">{{interno}}</td>
+          <td class="small">
+            {{#if (eq estado 'Enviado')}}<span class="badge text-bg-success">Enviado</span><div class="text-muted">{{enviado}}</div>{{/if}}
+            {{#if (eq estado 'Pendiente')}}<span class="badge text-bg-warning">Pendiente</span>{{/if}}
+            {{#if (eq estado 'Enviando')}}<span class="badge text-bg-info">Enviando…</span>{{/if}}
+            {{#if (eq estado 'Sin correo')}}<span class="badge text-bg-secondary">Sin correo</span><div class="text-muted">RN4: el familiar no tiene correo</div>{{/if}}
+            {{#if (eq estado 'Fallido')}}<span class="badge text-bg-danger">Fallido</span>{{/if}}
+            {{#if ultimo_error}}<div class="text-danger" title="{{ultimo_error}}">{{ultimo_error}}</div>{{/if}}
+            {{#if intentos}}<div class="text-muted">{{intentos}} intento(s)</div>{{/if}}
+          </td>
+          <td class="text-end">
+            {{#if reintentable}}{{#if (puede 'correos:configurar')}}
+              <form action="/correos/{{id_correo}}/reintentar" method="POST"><button class="btn btn-sm btn-outline-primary">Reintentar</button></form>
+            {{/if}}{{/if}}
+          </td>
+        </tr>
+      {{else}}
+        <tr><td colspan="6" class="text-center text-muted py-3">No hay correos con estos filtros.</td></tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

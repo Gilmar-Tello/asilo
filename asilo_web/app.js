@@ -110,6 +110,12 @@ app.use('/farmacia', farmaciaRutas);
 const finanzasRutas = require('./rutas/finanzasRutas');
 app.use('/finanzas', finanzasRutas);
 
+const reporteRutas = require('./rutas/reporteRutas');
+app.use('/reportes', reporteRutas);
+
+const correoRutas = require('./rutas/correoRutas');
+app.use('/correos', correoRutas);
+
 const authRutas = require('./rutas/authRutas');
 app.use('/', authRutas);
 
@@ -134,4 +140,10 @@ app.listen(PUERTO, () => {
     const calculadorCostos = require('./servicios/calculadorCostos');
     calculadorCostos.reprocesarPendientes();
     setInterval(calculadorCostos.reprocesarPendientes, 5 * 60 * 1000);
+
+    // Correos a familiares que no se pudieron enviar (Gmail caído, familiar sin correo que ya lo registró):
+    // se reintentan al arrancar y cada 5 minutos (CU-09, FE-02)
+    const notificador = require('./servicios/notificador');
+    notificador.reintentarPendientes();
+    setInterval(notificador.reintentarPendientes, 5 * 60 * 1000);
 });
