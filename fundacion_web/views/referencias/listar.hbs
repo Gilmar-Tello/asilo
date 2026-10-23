@@ -10,7 +10,7 @@
     </select>
   </div>
   <div class="col-auto">
-    <button type="submit" class="btn btn-outline-success">Filtrar</button>
+    <button type="submit" class="btn btn-outline-primary">Filtrar</button>
   </div>
   {{#if estado}}
     <div class="col-auto">
@@ -36,7 +36,7 @@
     <tbody>
       {{#each lista}}
         <tr>
-          <td>{{codigo}}</td>
+          <td class="text-nowrap fw-semibold">{{codigo}}</td>
           <td>
             {{interno_nombre}}
             {{#if interno_edad}}<div class="small text-muted">{{interno_edad}} años</div>{{/if}}
@@ -51,7 +51,7 @@
           <td class="small text-muted">{{fecha_recepcion_texto}}</td>
           <td class="text-end">
             <a href="/referencias/{{codigo}}"
-               class="btn btn-sm {{#if requiere_atencion}}btn-success{{else}}btn-outline-secondary{{/if}}">
+               class="btn btn-sm {{#if requiere_atencion}}btn-primary{{else}}btn-outline-secondary{{/if}}">
               {{#if requiere_atencion}}Atender{{else}}Ver{{/if}}
             </a>
           </td>

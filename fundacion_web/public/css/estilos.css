@@ -1,0 +1,53 @@
+/* ===== PALETA DE COLORES: la MISMA del asilo (asilo_web/public/css/estilos.css) ===== */
+:root {
+  --azul: #1877f2;
+  --azul-oscuro: #0d5bc4;
+  --azul-claro: #eaf2fe;
+  --texto: #1c1e21;
+  --texto-suave: #65676b;
+  --borde: #dddfe2;
+  --fondo: #f0f2f5;
+}
+
+/* Bootstrap usa estas variables para .btn-primary, .text-primary, enlaces, etc.:
+   así sus azules quedan iguales a los del asilo */
+:root {
+  --bs-primary: #1877f2;
+  --bs-primary-rgb: 24, 119, 242;
+  --bs-link-color: #1877f2;
+  --bs-link-color-rgb: 24, 119, 242;
+  --bs-link-hover-color: #0d5bc4;
+}
+.btn-primary {
+  --bs-btn-bg: var(--azul);
+  --bs-btn-border-color: var(--azul);
+  --bs-btn-hover-bg: var(--azul-oscuro);
+  --bs-btn-hover-border-color: var(--azul-oscuro);
+  --bs-btn-active-bg: var(--azul-oscuro);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--azul);
+  --bs-btn-border-color: var(--azul);
+  --bs-btn-hover-bg: var(--azul);
+  --bs-btn-hover-border-color: var(--azul);
+  --bs-btn-active-bg: var(--azul-oscuro);
+}
+
+.cuerpo-sistema {
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+}
+
+/* Barra superior: igual que la del asilo */
+.barra-superior {
+  background: var(--azul);
+}
+.barra-superior .navbar-brand { color: #fff; font-weight: bold; }
+.barra-superior .subtitulo { color: rgba(255, 255, 255, 0.8); font-size: 0.9rem; }
+
+/* Tarjetas y tablas sobre el fondo gris claro */
+.card { border-color: var(--borde); }
+.card-header { background: var(--azul-claro); color: var(--texto); font-weight: bold; border-bottom-color: var(--borde); }
+.table > thead { --bs-table-bg: var(--azul-claro); }

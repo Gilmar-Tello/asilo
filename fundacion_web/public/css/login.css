@@ -1,0 +1,92 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.contenedor-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 60px;
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    padding: 20px;
+}
+
+/*formulario*/
+.caja-login {
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    width: 380px;
+}
+
+.caja-login input {
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    font-size: 17px;
+}
+
+.btn-login {
+  width: 100%;
+  padding: 12px;
+  background-color: #1877f2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-login:hover {
+  background-color: #166fe5;
+}
+
+.link-olvido {
+  display: block;
+  text-align: center;
+  color: #1877f2;
+  text-decoration: none;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.caja-login hr {
+  margin-top: 20px;
+  border: none;
+  border-top: 1px solid #dadde1;
+}
+
+/* Lado derecho: texto */
+.lado-texto h1 {
+  color: #1877f2;
+  font-size: 48px;
+  line-height: 1.1;
+}
+
+.lado-texto p {
+  font-size: 24px;
+  color: #1c1e21;
+  margin-top: 15px;
+}
+
+/* Responsive: en móvil se apilan */
+@media (max-width: 900px) {
+  .contenedor-login {
+    flex-direction: column-reverse;
+    gap: 30px;
+  }
+  .lado-texto {
+    text-align: center;
+  }
+  .lado-texto h1 {
+    font-size: 34px;
+  }
+}
